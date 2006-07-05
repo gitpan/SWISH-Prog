@@ -1,0 +1,43 @@
+SWISH::Prog version 0.01
+=================
+
+ABOUT
+
+SWISH::Prog is an indexing framework built around the Swish-e -S Prog feature.
+It is designed to make writing Swish-e-based search applications
+easier.
+
+INSTALLATION
+
+To install this module type the following:
+
+   perl Makefile.PL
+   make
+   make test
+   make install
+
+DEPENDENCIES
+
+This module requires these other modules and libraries:
+
+  Search::Tools
+  File::Slurp
+  File::Basename
+  File::stat
+  File::Type
+  SWISH::Filter
+  Class::Accessor::Fast
+  File::Find
+  File::Temp
+  Data::Dumper
+  LWP::UserAgent
+
+COPYRIGHT AND LICENCE
+
+Put the correct copyright and licence information here.
+
+Copyright (C) 2006 Peter Karman
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
+

@@ -1,0 +1,6 @@
+Revision history for Perl extension Prog.
+
+0.01  Tue Nov 22 21:54:37 2005
+	- original version; created by h2xs 1.22 with options
+		-XA -n Prog
+

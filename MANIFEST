@@ -1,0 +1,16 @@
+Changes
+Makefile.PL
+MANIFEST
+lib/SWISH/Prog.pm
+lib/SWISH/Prog/Config.pm
+lib/SWISH/Prog/Headers.pm
+lib/SWISH/Prog/Index.pm
+lib/SWISH/Prog/Doc.pm
+lib/SWISH/Prog/DBI.pm
+lib/SWISH/Prog/DBI/Doc.pm
+README
+t/1.t
+t/2.t
+t/config.t
+t/test.html
+META.yml                                 Module meta-data (added by MakeMaker)
