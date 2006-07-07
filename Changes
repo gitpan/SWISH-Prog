@@ -4,3 +4,13 @@ Revision history for Perl extension Prog.
 	- original version; created by h2xs 1.22 with options
 		-XA -n Prog
 
+0.02	POD fixes
+        added merge() add() and mv() methods to S::P::Index
+          and t/3merge.t and t/4add.t
+        added 2 more test docs
+        added format() accessor to S::P::Index
+        changed S::P::I to use Class::Accessor::Fast
+          since we don't need to override get/set
+        S::P now always inits an indexer even if fh=>0
+
+

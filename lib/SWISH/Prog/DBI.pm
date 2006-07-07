@@ -19,7 +19,7 @@ our $XMLer   = Search::Tools::XML->new;
 
 =head1 NAME
 
-SWISH::DBI - index DB records with Swish-e
+SWISH::Prog::DBI - index DB records with Swish-e
 
 =head1 SYNOPSIS
 

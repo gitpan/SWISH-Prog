@@ -19,7 +19,7 @@ use SWISH::Prog::Index;
 
 use base qw( Class::Accessor::Fast );
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 our $Debug   = $ENV{PERL_DEBUG} || 0;
 our $ExtRE   = qr{(html|htm|xml|txt|pdf|ps|doc|ppt|xls|mp3)(\.gz)?}io;
 
@@ -242,6 +242,10 @@ sub _init
     unless (exists $self->{fh})
     {
         $self->init_indexer;
+    }
+    else
+    {
+        $self->indexer( SWISH::Prog::Index->new($self) );
     }
 
     # if fh = 0 or undef, default to stdout

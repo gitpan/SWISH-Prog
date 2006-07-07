@@ -29,14 +29,15 @@ This module requires these other modules and libraries:
   Class::Accessor::Fast
   File::Find
   File::Temp
+  File::Copy
   Data::Dumper
   LWP::UserAgent
 
 COPYRIGHT AND LICENCE
 
-Put the correct copyright and licence information here.
-
 Copyright (C) 2006 Peter Karman
+
+Thanks to Atomic Learning, Inc for supporting some of the development of this module.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

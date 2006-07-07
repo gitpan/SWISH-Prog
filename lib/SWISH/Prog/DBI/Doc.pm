@@ -10,7 +10,7 @@ our $VERSION = '0.01';
 
 =head1 NAME
 
-SWISH::DBI::Doc - index DB records with Swish-e
+SWISH::Prog::DBI::Doc - index DB records with Swish-e
 
 =head1 SYNOPSIS
 
