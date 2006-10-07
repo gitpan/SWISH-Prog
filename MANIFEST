@@ -8,9 +8,20 @@ lib/SWISH/Prog/Index.pm
 lib/SWISH/Prog/Doc.pm
 lib/SWISH/Prog/DBI.pm
 lib/SWISH/Prog/DBI/Doc.pm
+lib/SWISH/Prog/Find.pm
+lib/SWISH/Prog/Spider.pm
+lib/SWISH/Prog/Object.pm
+lib/SWISH/Prog/Object/Doc.pm
 README
 t/1.t
 t/2.t
+t/3merge.t
+t/4add.t
+t/5object.t
+t/pod.t
+t/pod-coverage.t
 t/config.t
 t/test.html
+t/test2.html
+t/test.xml
 META.yml                                 Module meta-data (added by MakeMaker)

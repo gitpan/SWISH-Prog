@@ -14,8 +14,7 @@ use overload('""'     => \&as_string,
 
 use SWISH::Prog::Headers;
 
-our $VERSION = '0.01';
-our $Debug   = $ENV{PERL_DEBUG} || 0;
+our $VERSION = '0.02';
 
 my @Attr = qw/ url modtime type parser content update debug size /;
 
@@ -83,16 +82,6 @@ Example:
  1;
 
 
-=head1 VARIABLES
-
-=over
-
-=item Debug
-
-Default is 0. Set to 1 (true) for verbage on stderr.
-
-=back
-
 =head1 METHODS
 
 All of the following methods may be overridden when subclassing
@@ -155,7 +144,7 @@ sub _init
         @$self{keys %extra} = values %extra;
     }
 
-    $self->{debug} ||= $Debug || 0;
+    $self->{debug} ||= $ENV{PERL_DEBUG} || 0;
 
 }
 

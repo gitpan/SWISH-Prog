@@ -23,7 +23,6 @@ __PACKAGE__->mk_accessors(
       warnings
       native2
       btree2
-      swish3
       debug
       opts
       format
@@ -41,7 +40,7 @@ SWISH::Prog::Index - handle Swish-e indexing
 
  use SWISH::Prog::Index
  my $indexer = SWISH::Prog::Index->new(
-                format      => 'native2' || 'btree2' || 'swish3',
+                format      => 'native2' || 'btree2',
                 config      => SWISH::Prog::Config->new,
                 exe         => 'path/to/swish-e',
                 verbose     => 0|1|2|3,
@@ -62,8 +61,8 @@ SWISH::Prog::Index - handle Swish-e indexing
 =head1 DESCRIPTION
 
 SWISH::Prog::Index performs Swish-e indexing. For version 2.x
-of Swish-e this is simply a convenience wrapper around the swish-e
-binary executable. See L<SWISH3> for details about how version 3 will work.
+of Swish-e this is simply a convenience wrapper around the B<swish-e>
+binary executable.
 
 
 =head1 FUNCTIONS
@@ -80,10 +79,6 @@ to run.
 True enough. But go() was easy to code in two lines, so I did. And it
 requires one less keystroke. Laziness is a virtue!
 
-Plus, Swish3 will have a native Perl XS API, and
-this module will support all versions with go().
-See ENVIRONMENT VARIABLES for more details.
-
 go() is the only export of this module.
 
 =head1 METHODS
@@ -98,9 +93,38 @@ sub go
 
 =head2 new
 
-Create indexer object.
+Create indexer object. All the following parameters are also accessor methods.
 
-[TODO parameters]
+=over
+
+=item name
+
+The name of the index. Should be a file path.
+
+=item config
+
+A SWISH::Prog::Config object.
+
+=item exe
+
+The path to the C<swish-e> executable. If empty, will just look in $ENV{PATH}.
+
+=item verbose
+
+Takes same args as C<swish-e -v> option.
+
+=item warnings
+
+Takes same args as C<swish-e -W> option.
+
+=item format
+
+Tell the indexer what kind of index to expect. Options are C<native2> (default) or
+C<btree> (for the experimental incremental feature in version 2.4).
+
+The C<format> param API is subject to change as Swish3 is developed.
+
+=back
 
 =cut
 
@@ -120,7 +144,7 @@ sub _init
     $self->{'start'} = time;
     if (@_ == 1 && $_[0]->isa('SWISH::Prog'))
     {
-        for (qw/ name verbose opts debug config /)
+        for ($_[0]->_index_methods)
         {
             $self->$_($_[0]->$_);
         }
@@ -191,7 +215,6 @@ sub DESTROY
 
 }
 
-=pod
 
 =head2 rm
 
@@ -268,15 +291,10 @@ sub files
              "$i",       "$i.prop",  "$i.array", "$i.file",
              "$i.btree", "$i.psort", "$i.wdata");
     }
-    elsif ($self->swish3)    # TODO
-    {
-        push(@f, "$i", "$i.prop");
-    }
 
     return (@f);
 }
 
-=pod
 
 =head2 run( [cmd] )
 
@@ -294,8 +312,6 @@ it for you.
 sub run
 {
     my $self = shift;
-
-    # TODO Swish3 XS support
 
     my $i = $self->name     || 'index.swish-e';  # TODO different default name??
     my $v = $self->verbose  || 0;
@@ -461,14 +477,6 @@ sub add
     return $self;
 }
 
-=pod
-
-=head1 SWISH3
-
-If the C<SWISH3> environment variable is set, SWISH::Prog::Index will load 
-SWISH::Prog::Index::3 and use that interface instead. 
-
-=cut
 
 1;
 

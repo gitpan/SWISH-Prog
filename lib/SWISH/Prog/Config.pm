@@ -1,7 +1,5 @@
 package SWISH::Prog::Config;
 
-=pod
-
 =head1 NAME
 
 SWISH::Prog::Config - read & write Swish-e config files
@@ -15,11 +13,29 @@ SWISH::Prog::Config - read & write Swish-e config files
  
 =head1 DESCRIPTION
 
-The Config class is intended to be accessed via SWISH::Prog new().
+The SWISH::Prog::Config class is intended to be accessed via SWISH::Prog new().
 
 See the Swish-e documentation for a list of configuration parameters.
 Each parameter has an accessor/mutator method as part of the Config object.
-Forwards-compatability is offered for Swish3 with XML format config files.
+Some preliminary compatability is offered for Swish::Config
+with XML format config files.
+
+B<NOTE:> Every config parameter can take either a scalar or an array ref as a value.
+In addition, you may append config values to any existing values by passing an additional
+true argument. The return value of any 'get' is always an array ref.
+
+Example:
+
+ $config->MetaNameAlias( ['foo bar', 'one two', 'red yellow'] );
+ $config->MetaNameAlias( 'green blue', 1 );
+ print join("\n", @{ $config->MetaNameAlias }), " \n";
+ # would print:
+ # foo bar
+ # one two
+ # red yellow
+ # green blue
+ 
+
 
 =head1 METHODS
 
@@ -36,109 +52,119 @@ Example:
  
 =cut
 
-
 use strict;
 use warnings;
 use Carp;
+use Config::General;
+use IO::All;
+use Data::Dump qw/dump/;
 use File::Temp qw/ tempfile /;
-use File::Slurp;
 use Search::Tools::XML;
+use Path::Class qw();    # we have our own file() method
+
+our $VERSION = '0.02';
 
 our $XMLer = Search::Tools::XML->new;
 
-use base qw( Class::Accessor::Fast );
+use base qw( Class::Accessor );
 
-# TODO - better way
-# prepend some with _ that we have custom methods for
+my %unique = map { $_ => 1 } qw(
+  MetaNames
+  PropertyNames
+  PropertyNamesNoStripChars
+
+  );
 
 my @Ver2C = qw/
 
-      AbsoluteLinks 
-      BeginCharacters
-      BumpPositionCounterCharacters
-      Buzzwords 
-      ConvertHTMLEntities 
-      DefaultContents 
-      Delay
-      DontBumpPositionOnEndTags
-      DontBumpPositionOnStartTags
-      EnableAltSearchSyntax 
-      EndCharacters
-      EquivalentServerserver
-      ExtractPath
-      FileFilter
-      FileFilterMatch 
-      FileInfoCompression 
-      FileMatch
-      FileRules
-      FollowSymLinks 
-      FuzzyIndexingMode 
-      HTMLLinksMetaName
-      IgnoreFirstChar
-      IgnoreLastChar
-      IgnoreLimit
-      IgnoreMetaTags
-      IgnoreNumberChars
-      IgnoreTotalWordCountWhenRanking 
-      IgnoreWords 
-      ImageLinksMetaName
-      IncludeConfigFile
-      IndexAdmin
-      IndexAltTagMetaName
-      IndexComments 
-      IndexContents
-      IndexDescription
-      IndexDir 
-      IndexFile
-      IndexName
-      IndexOnly
-      IndexPointer
-      IndexReport 
-      MaxDepth
-      MaxWordLimit
-      MetaNameAlias
-      _MetaNames
-      MinWordLimit
-      NoContents
-      obeyRobotsNoIndex 
-      ParserWarnLevel 
-      PreSortedIndex
-      PropCompressionLevel 
-      PropertyNameAlias
-      _PropertyNames
-      PropertyNamesCompareCase
-      PropertyNamesDate
-      PropertyNamesIgnoreCase
-      PropertyNamesMaxLength
-      _PropertyNamesNoStripChars
-      PropertyNamesNumeric
-      PropertyNamesSortKeyLength
-      ReplaceRules 
-      ResultExtFormatName
-      SpiderDirectory
-      StoreDescription 
-      SwishProgParameters
-      SwishSearchDefaultRule 
-      SwishSearchOperators
-      TmpDirpath
-      TranslateCharacters 
-      TruncateDocSize
-      UndefinedMetaTags 
-      UndefinedXMLAttributes 
-      UseSoundex 
-      UseStemming
-      UseWords
-      WordCharacters
-      XMLClassAttributes
-
+  AbsoluteLinks
+  BeginCharacters
+  BumpPositionCounterCharacters
+  Buzzwords
+  ConvertHTMLEntities
+  DefaultContents
+  Delay
+  DontBumpPositionOnEndTags
+  DontBumpPositionOnStartTags
+  EnableAltSearchSyntax
+  EndCharacters
+  EquivalentServer
+  ExtractPath
+  FileFilter
+  FileFilterMatch
+  FileInfoCompression
+  FileMatch
+  FileRules
+  FollowSymLinks
+  FuzzyIndexingMode
+  HTMLLinksMetaName
+  IgnoreFirstChar
+  IgnoreLastChar
+  IgnoreLimit
+  IgnoreMetaTags
+  IgnoreNumberChars
+  IgnoreTotalWordCountWhenRanking
+  IgnoreWords
+  ImageLinksMetaName
+  IncludeConfigFile
+  IndexAdmin
+  IndexAltTagMetaName
+  IndexComments
+  IndexContents
+  IndexDescription
+  IndexDir
+  IndexFile
+  IndexName
+  IndexOnly
+  IndexPointer
+  IndexReport
+  MaxDepth
+  MaxWordLimit
+  MetaNameAlias
+  MetaNames
+  MinWordLimit
+  NoContents
+  obeyRobotsNoIndex
+  ParserWarnLevel
+  PreSortedIndex
+  PropCompressionLevel
+  PropertyNameAlias
+  PropertyNames
+  PropertyNamesCompareCase
+  PropertyNamesDate
+  PropertyNamesIgnoreCase
+  PropertyNamesMaxLength
+  PropertyNamesNoStripChars
+  PropertyNamesNumeric
+  PropertyNamesSortKeyLength
+  RecursionDepth
+  ReplaceRules
+  ResultExtFormatName
+  SpiderDirectory
+  StoreDescription
+  SwishProgParameters
+  SwishSearchDefaultRule
+  SwishSearchOperators
+  TmpDir
+  TranslateCharacters
+  TruncateDocSize
+  UndefinedMetaTags
+  UndefinedMetaNames
+  UndefinedXMLAttributes
+  UseSoundex
+  UseStemming
+  UseWords
+  WordCharacters
+  XMLClassAttributes
 
   /;
 
 sub new
 {
-    my $package = shift;
-    my $self    = {};
-    bless($self, $package);
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    my $self  = {};
+    bless($self, $class);
     $self->_init(@_);
     return $self;
 }
@@ -147,18 +173,67 @@ sub _init
 {
     my $self = shift;
     $self->{'_start'} = time;
-    if (@_)
-    {
-        my %extra = @_;
-        @$self{keys %extra} = values %extra;
-    }
 
     $self->mk_accessors(qw/ file debug /, @Ver2C);
 
+    if (@_)
+    {
+        my %extra = @_;
+        $self->$_($extra{$_}) for keys %extra;
+    }
+    
+    $self->IgnoreTotalWordCountWhenRanking(0) unless defined $self->IgnoreTotalWordCountWhenRanking;
 }
 
+sub set
+{
+    my $self = shift;
+    my ($key, $val, $append) = @_;
 
-# TODO others that require 'array' of values?
+    if ($key eq 'file' or $key eq 'debug')
+    {
+        return $self->{$key} = $val;
+    }
+    elsif (exists $unique{$key})
+    {
+        return $self->_name_hash(@_);
+    }
+
+    $self->{$key} = [] unless defined $self->{$key};
+
+    # save everything as an array ref regardless of input
+    if (ref $val)
+    {
+        if (ref($val) eq 'ARRAY')
+        {
+            $self->{$key} = $append ? [@{$self->{$key}}, @$val] : $val;
+        }
+        else
+        {
+            croak "$key cannot accept a " . ref($val) . " ref as a value";
+        }
+    }
+    else
+    {
+        $self->{$key} = $append ? [@{$self->{$key}}, $val] : [$val];
+    }
+
+}
+
+sub get
+{
+    my $self = shift;
+    my $key  = shift;
+
+    if (exists $unique{$key})
+    {
+        return $self->_name_hash($key);
+    }
+    else
+    {
+        return $self->{$key};
+    }
+}
 
 sub _name_hash
 {
@@ -169,10 +244,9 @@ sub _name_hash
     {
 
         #carp "setting $name => " . join(', ', @_);
-
         for (@_)
         {
-            $self->{$name}->{$_} = 1;
+            $self->{$name}->{lc($_)} = 1;
         }
     }
     else
@@ -183,57 +257,73 @@ sub _name_hash
     }
 }
 
-=head2 metanames
+=head2 read2( I<path/file> )
 
-Get/set list of Metanames.
+Reads version 2 compatible config file and stores in current object.
+Returns parsed config file as a hashref or undef on failure to parse.
 
+Example:
+
+ use SWISH::Prog::Config;
+ my $config = SWISH::Prog::Config->new();
+ my $parsed = $config->read2( 'my/file.cfg' );
+ 
+ # should print same thing
+ print $config->WordCharacters->[0], "\n";
+ print $parsed->{WordCharacters}, "\n";
+ 
+ 
 =cut
 
-sub metanames
+sub read2
 {
     my $self = shift;
-    return $self->_name_hash('_metanames', @_);
+    my $file = shift or croak "version2 type file required";
+
+    my $buf =
+      io($file)->all;    # can't read as UTF8 since version2 doesn't support it
+
+    # filter include syntax to work with Config::General's
+    $buf =~ s,IncludeConfigFile (.+?)\n,<<include $1>>\n,g;
+
+    my $dir = Path::Class::File->new($file)->parent;
+
+    # TODO are these the right opts?
+    my $c =
+      Config::General->new(
+                           -String          => $buf,
+                           -IncludeRelative => 1,
+                           -ConfigPath      => [$dir]
+                          )
+      or return;
+
+    my %conf = $c->getall;
+
+    for (keys %conf)
+    {
+        my $v = $conf{$_};
+        $self->$_($v);
+    }
+
+    return \%conf;
 }
 
-=head2 propertynames
-
-Get/set list of PropertyNames.
-
-=cut
-
-sub propertynames
-{
-    my $self = shift;
-    return $self->_name_hash('_propertynames', @_);
-}
-
-=head2 propertynamesnostripchars
-
-Get/set list of PropertyNamesNoStripChars.
-
-=cut
-
-sub propertynamesnostripchars
-{
-    my $self = shift;
-    return $self->_name_hash('_propertynamesnostripchars', @_);
-}
-
-=head2 file
-
-Returns name of the file written by write2().
-
-
-=head2 write2( I<file/path> )
+=head2 write2( I<path/file> )
 
 Writes version 2 compatible config file.
 
-If I<file/path> is omitted, a temp file will be
+If I<path/file> is omitted, a temp file will be
 written using File::Temp.
 
 Returns full path to file.
 
 Full path is also available via file() method.
+
+
+=head2 file
+
+Returns name of the file written by write2().
+
 
 =cut
 
@@ -248,18 +338,14 @@ sub write2
     }
 
     my @config;
-    for my $name (@Ver2C)
-    {
-        my $v = $self->$name;
-        next unless $v;
-        push(@config, "$name $v");
 
-    }
-    
-    for (qw/ MetaNames PropertyNames PropertyNamesNoStripChars /)
+    # must pass metanames and properties first, since others may depend on them
+    # in swish config parsing.
+    for my $method (keys %unique)
     {
-        my $method = lc($_);
-        my @v      = $self->$method;
+        my @v = $self->$method;
+
+        next unless scalar(@v);
 
         #carp "checking $_ => $method: " . join(', ', @v);
         # can't just check $self->$method for TRUE
@@ -268,15 +354,33 @@ sub write2
         {
 
             #carp "adding $_ to config";
-            push(@config, "$_ " . join(' ', @v));
+            push(@config, "$method " . join(' ', @v));
+        }
+    }
+
+    for my $name (@Ver2C)
+    {
+        next if exists $unique{$name};
+
+        my $v = $self->$name;
+        next unless defined $v;
+        if (ref $v)
+        {
+            push(@config, "$name $_") for @$v;
+        }
+        else
+        {
+            push(@config, "$name $v");
         }
     }
 
     my $buf = join("\n", @config) . "\n";
-    
+
     print STDERR $buf if $self->debug;
-    
-    write_file($file, $buf);
+
+    $self->_write_utf8($file, $buf);
+
+    print STDERR "wrote config file $path using $file" if $self->debug;
 
     # remember file
     $self->file($path);
@@ -284,128 +388,82 @@ sub write2
     return $path;
 }
 
-=head2 ver2_to_ver3( @I<files> )
+# IO::All can't seem to write to a filehandle (or else I can't discern the syntax)
+sub _write_utf8
+{
+    my ($self, $file, $buf) = @_;
+    binmode $file, ':utf8';
+    print {$file} $buf;
+}
+
+=head2 ver2_to_xml( I<file> )
 
 Utility method for converting Swish-e version 2 style config files
-to Swish3 XML style.
+to SWISH::Config XML style.
 
-Takes an array of version 2 files and converts each to version 3
-format, writing to same location with C<.xml> appended.
+Converts I<file> to XML format and returns as XML string.
 
-B<NOTE:> Some version 2 configuration options are not forward-compatible with 
-version 3 and will be carp()ed about if found.
+B<NOTE:> This API is liable to change as SWISH::Config is developed.
+
+  my $xmlconf = $config->ver2_to_xml( 'my/file.config' );
 
 =cut
 
-sub ver2_to_ver3
+sub ver2_to_xml
 {
-    my $self  = shift;
-    my @files = @_;
-
-    my $re = qr/^(\S+)\s+(\S+)\s*(.*)$/o;
+    my $self = shift;
+    my $file = shift or croak "version2 type file required";
 
     # list of config directives that take arguments to the opt value
-    my %takes_arg = ();
-    $takes_arg{$_}++ for (
-        qw/
+    # i.e. the directive has 3 or more parts
+    my %takes_arg = map { $_ => 1 }
+      qw(
 
-        StoreDescription
-        PropertyNamesSortKeyLength
-        PropertyNamesMaxLength
-        PropertyNameAlias
-        MetaNameAlias
-        IndexContents
-        IgnoreWords
-        ExtractPath
-        FileFilter
+      StoreDescription
+      PropertyNamesSortKeyLength
+      PropertyNamesMaxLength
+      PropertyNameAlias
+      MetaNameAlias
+      IndexContents
+      IgnoreWords
+      ExtractPath
+      FileFilter
+      FileRules
+      ReplaceRules
 
-        /
-    );
+      );
 
-    # TODO: skip list of deprecated options and give helpful warning
-    # FileRules
-    # FileFilter
-    # FileFilterMatch
-    # FileMatch
-    # EquivalentServer
-    # MaxDepth
-    # Delay
-    # TmpDir
-    # ReplaceRules
-    # SpiderDirectory
+    my $config = $self->new->read2($file);
+    my $time   = localtime();
 
-    # TODO: convert *WordChar to Ignore*Char
+    # TODO  what if this encoding is not correct?
+    my $xml = <<EOF;
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- converted from $file at $time -->
+<swishconfig>
+EOF
 
-    for my $old (@files)
+  KEY: for my $k (sort keys %$config)
     {
+        my @args = ref $config->{$k} ? @{$config->{$k}} : ($config->{$k});
 
-        my $new = "$old.xml";
-
-        open(OLD, "< $old") or die "can't read $old: $!\n";
-        open(NEW, "> $new") or die "can't write $new: $!\n";
-
-        my $time = localtime();
-
-        # TODO  what if this encoding is not correct?
-
-        print NEW qq{<?xml version="1.0" encoding="iso-8859-1"?>};
-
-        print NEW "<!-- converted from $old at $time -->\n";
-
-        print NEW "<config>\n";
-
-        # TODO join split lines
-        # e.g.,
-        # foo bar \
-        #  baz
-
-        while (<OLD>)
+      ARG: for my $arg (@args)
         {
-
-            next if m/^(\s+|#)/;
-
-            my ($name, $val, $args) = m!$re!;
-            my @i = split(/\s+/, $args);
-
-            unshift(@i, $val) unless exists $takes_arg{$name};
-
-            # each value gets its own tagset
-
-            # concatenate " " marks
-            if ($i[0] =~ m/^(['"])/)
+            $xml .= "  <$k";
+            if ($takes_arg{$k})
             {
-                my $q = $1;
-                while ($i[0] !~ m/$q$/)
-                {
-                    $i[0] .= ' ' . splice(@i, 1, 1);
-                }
+                my ($class, $v) = ($arg =~ m/^\ *(\S+)\ +(.+)$/);
+                $arg = $v;
+                $xml .= ' type="' . $XMLer->utf8_safe($class) . '"';
             }
-
-            for my $v (@i)
-            {
-
-                $v =~ s/^['"]|['"]$//g;
-
-                print NEW "  <$name";
-                if (exists $takes_arg{$name})
-                {
-                    print NEW ' v="' . $XMLer->utf8_safe($val) . '"';
-                }
-                print NEW '>' . $XMLer->utf8_safe($v);
-                print NEW "</$name>\n";
-
-            }
+            $xml .= '>' . $XMLer->utf8_safe($arg) . "</$k>\n";
 
         }
-
-        print NEW "</config>\n";
-
-        close(OLD);
-        close(NEW);
-
-        print "$old saved as $new\n";
-
     }
+
+    $xml .= "</swishconfig>\n";
+
+    return $xml;
 
 }
 
@@ -413,6 +471,15 @@ sub ver2_to_ver3
 
 __END__
 
+=head1 TODO
+
+IgnoreTotalWordCountWhenRanking defaults to 0 which is B<not> the default in Swish-e.
+This is to make the RankScheme feature work by default. Really, the default should be
+0 in Swish-e itself.
+
+=head1 SEE ALSO
+
+SWISH::Prog, SWISH::Parser
 
 =head1 AUTHOR
 

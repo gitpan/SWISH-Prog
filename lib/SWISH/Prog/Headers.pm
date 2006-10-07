@@ -30,7 +30,7 @@ use bytes;
 #}
 
 our $AutoURL = $^T;
-our $Debug   = $ENV{SWISH3_DEBUG} || 0;
+our $Debug   = $ENV{SWISHP_DEBUG} || 0;
 
 our %Headers = (
     2 => {
@@ -39,11 +39,12 @@ our %Headers = (
           parser  => 'Document-Type',
           update  => 'Update-Mode',
          },
-    3 => {
+    P => {
           url     => 'Content-Location',
           modtime => 'Last-Modified',      # but in epoch seconds
           parser  => 'Document-Type',
           type    => 'Content-Type',
+          update  => 'Update-Mode',
          }
 
 );
@@ -53,7 +54,7 @@ sub head
     my $class   = shift;
     my $buf     = shift || croak "need buffer to generate headers\n";
     my $opts    = shift || {};
-    my $version = ($opts->{swish3} || $ENV{SWISH3}) ? 3 : 2;
+    my $version = ($opts->{swishp} || $ENV{SWISHP}) ? 'P' : 2;
 
     $opts->{url} = $AutoURL++ unless exists $opts->{url};
     $opts->{modtime} ||= time();
@@ -81,7 +82,7 @@ sub head
 
     for my $k (sort keys %$opts)
     {
-        next unless $opts->{$k};
+        next unless defined $opts->{$k};
         my $label = $Headers{$version}->{$k} or next;
         push(@h, "$label: $opts->{$k}");
     }
@@ -164,34 +165,35 @@ the SWISH::Prog parser() method.
 
 The MIME type of the document. If not supplied, it will be guessed at based
 on the file extension of the URL (if supplied) or $DefMime. B<NOTE>: MIME type
-is only used in Swish-3 and later.
+is only used in SWISH::Parser headers.
 
 =item update
 
 If Swish-e is in incremental mode (which must be indicated by setting the
 increm parameter in new()), this value can be used to set the update
-mode for the document. B<NOTE>: this feature is only relevant in Swish-e versions
-prior to Swish-3.
+mode for the document.
 
-=item swish3
+=item swishp
 
-Set to TRUE to use Swish-e version 3 header labels (include Content-Type).
+Set to TRUE to use SWISH::Parser header labels (including Content-Type).
 
 =back
 
-B<NOTE:> The special environment variable C<SWISH3> is checked in order to 
-determine the correct header labels. If you are using Swish-e version 3 or later,
-you must set that environment variable, or pass the C<swish3> option.
+B<NOTE:> The special environment variable C<SWISHP> is checked in order to 
+determine the correct header labels. If you are using SWISH::Parser,
+you must set that environment variable, or pass the C<swishp> option.
 
-=head1 HEADERS
+=head1 Headers API
 
-The Swish-e API recognizes the following headers:
+See the Swish-e documentation at L<http://swish-e.org/>.
 
- #TODO 
+For SWISH::Parser Headers API (which is slightly different) see
+L<http://swishparser.peknet.com/>.
  
 =head1 SEE ALSO
 
-SWISH::Prog
+SWISH::Prog,
+SWISH::Parser
 
 
 =head1 AUTHOR

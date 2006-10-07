@@ -12,5 +12,28 @@ Revision history for Perl extension Prog.
         changed S::P::I to use Class::Accessor::Fast
           since we don't need to override get/set
         S::P now always inits an indexer even if fh=>0
+        added private _index_methods to S::P
 
 
+0.03    * removed all mentions of SWISH3
+        * test indexes are removed as part of 'make clean'
+        * switched from Data::Dumper to Data::Dump
+        * added new SWISH::Prog::Object example
+        * fixed bug in SWISH::Prog::Headers to test defined() 
+          rather than simply eval true/false
+        * fixed bug in SWISH::Prog::DBI with accepting DBI handle
+          in init()
+        * changed to using IO::All instead of File::stat and File::Slurp
+          for better UTF8 support
+        * changed default order of init() and init_indexer() to work
+          more intuitively. Fixed S::P::DBI accordingly.
+          To prevent an indexer from being init'd (as in 0.02) simply
+          override init_indexer() and don't call SUPER::init_indexer().
+        * new feature: SWISH::Prog::Find
+        * renamed meta() to table_meta() in SWISH::Prog::DBI for clarity.
+        * S::P::Config now always handles config params as arrays
+        * Config metanames() propertynames() and propertynamesnostripchars() 
+          are no longer available 
+        * S::P::Config now requires IO::All and Config::General; added read2() method.
+        * new feature placeholder: SWISH::Prog::Spider
+        

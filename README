@@ -1,4 +1,4 @@
-SWISH::Prog version 0.01
+SWISH::Prog version 0.03
 =================
 
 ABOUT
@@ -21,17 +21,18 @@ DEPENDENCIES
 This module requires these other modules and libraries:
 
   Search::Tools
-  File::Slurp
-  File::Basename
-  File::stat
-  File::Type
+  IO:All
   SWISH::Filter
   Class::Accessor::Fast
-  File::Find
   File::Temp
   File::Copy
-  Data::Dumper
+  File::Basename
+  File::Type
+  Data::Dump
   LWP::UserAgent
+  Path::Class
+  Path::Class::Iterator
+  Config::General
 
 COPYRIGHT AND LICENCE
 

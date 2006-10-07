@@ -4,15 +4,16 @@ use strict;
 use warnings;
 
 use Carp;
-use Data::Dumper;
+use Data::Dump qw/dump/;
 use DBI;
 use Search::Tools::XML;
 use SWISH::Prog::DBI::Doc;
 
 use base qw( SWISH::Prog );
 
-our $VERSION = '0.01';
-our $Debug   = $ENV{PERL_DEBUG} || 0;
+__PACKAGE__->mk_accessors(qw/ table_meta db title alias_columns /);
+
+our $VERSION = '0.02';
 our $XMLer   = Search::Tools::XML->new;
 
 =pod
@@ -22,28 +23,11 @@ our $XMLer   = Search::Tools::XML->new;
 SWISH::Prog::DBI - index DB records with Swish-e
 
 =head1 SYNOPSIS
-
-    package My::DBI::Prog;
-    use base qw( SWISH::Prog::DBI );
     
-    1;
-    
-    package My::DBI::Prog::Doc;
-    use base qw( SWISH::Prog::DBI::Doc );
-    
-    sub url_filter
-    {
-        my $doc = shift;
-        my $db_data = $doc->row;
-        $doc->url( $db_data->{colname_I_want_as_url} );
-    }
-    
-    1;
-    
-    package main;
+    use SWISH::Prog::DBI;
     use Carp;
     
-    my $dbi_indexer = My::DBI::Prog->new(
+    my $prog_dbi = SWISH::Prog::DBI->new(
         db => [
             "DBI:mysql:database=movies;host=localhost;port=3306",
             'some_user', 'some_secret_pass',
@@ -51,10 +35,11 @@ SWISH::Prog::DBI - index DB records with Swish-e
                 RaiseError  => 1,
                 HandleError => sub { confess(shift) },
             }
-        ]
+        ],
+        alias_columns => 1
     );
     
-    $dbi_indexer->create(
+    $prog_dbi->create(
             tables => {
                 'moviesIlike' => {
                     title       => 1,
@@ -76,29 +61,19 @@ search for your databases with Swish-e.
 Since SWISH::Prog::DBI inherits from SWISH::Prog, read the SWISH::Prog docs
 first. Any overridden methods are documented here.
 
-=head1 VARIABLES
-
-=over
-
-=item Debug
-
-Default is 0. Set to 1 (true) for verbage on stderr.
-
-=back
-
 =head1 METHODS
 
-=cut
-
-=pod
-
-=head2 new( db => I<DBI_connect_info> )
+=head2 new( db => I<DBI_connect_info>, alias_columns => 0|1 )
 
 Create new indexer object. I<DBI_connect_info> is passed
 directly to DBI's connect() method, so see the DBI docs for syntax.
 If I<DBI_connect_info> is a DBI handle object, it is accepted as is.
 If I<DBI_connect_info> is an array ref, it will be dereferenced and
 passed to connect(). Otherwise it will be passed to connect as is.
+
+The C<alias_columns> flag indicates whether all columns should be searchable
+under the default MetaName of swishdefault. The default is 1 (true). This
+is B<not> the default behaviour of swish-e; this is a feature of SWISH::Prog.
 
 B<NOTE:> The new() method simply inherits from SWISH::Prog, so any params
 valid for that method() are allowed here.
@@ -113,32 +88,58 @@ sub init
 {
     my $self = shift;
 
-    $self->mk_accessors(qw/ meta db quiet title /);
-
     # verify DBI connection
-    if (ref $self->db && ref $self->db eq 'ARRAY')
-    {
-        $self->db(DBI->connect(@{$self->{db}}));
-    }
-    elsif (ref $self->db && $self->db->isa('DBI'))
+    if (defined($self->db))
     {
 
-        # do nothing
+        if (ref($self->db) eq 'ARRAY')
+        {
+            $self->db(DBI->connect(@{$self->{db}}));
+        }
+        elsif (ref($self->db) && $self->db->isa('DBI::db'))
+        {
 
-    }
-    elsif ($self->db)
-    {
-        $self->db(DBI->connect($self->db));
+            # do nothing
+        }
+        else
+        {
+            $self->db(DBI->connect($self->db));
+        }
     }
     else
     {
-        croak "need DBI connection info";
+        croak "need DBI connection info in db param";
     }
 
-    $self->{debug} ||= $Debug || 0;
+    $self->{debug} ||= $ENV{PERL_DEBUG} || 0;
+    $self->{alias_columns} = 1 unless exists $self->{alias_columns};
 
     # cache meta
     $self->info;
+
+    # unless metanames are defined, use all the column names from all
+    # our discovered tables.
+    unless ($self->config->MetaNames)
+    {
+        for my $table (keys %{$self->table_meta})
+        {
+            $self->config->MetaNames(
+                              sort keys %{$self->table_meta->{$table}->{cols}});
+        }
+    }
+    
+
+    # alias the top level tags to that default search will match any metaname in any table
+    if ($self->alias_columns)
+    {
+        $self->config->MetaNameAlias(
+                                     'swishdefault '
+                                       . join(' ',
+                                              map { '_' . $_ . '_row' }
+                                                sort keys %{$self->table_meta}),
+                                     1  # always append
+                                    );
+    }
 
 }
 
@@ -156,7 +157,7 @@ sub init_indexer
     my $self = shift;
 
     # add 'table' metaname
-    $self->config->metanames('table');
+    $self->config->MetaNames('table');
 
     # save all row text in the swishdescription property for excerpts
     $self->config->StoreDescription('XML* <_desc>');
@@ -164,8 +165,7 @@ sub init_indexer
     # TODO get version
     $self->config->write2;
 
-    $self->indexer(SWISH::Prog::Index->new($self)->run);
-    $self->fh($self->indexer->fh);
+    $self->SUPER::init_indexer();
 
 }
 
@@ -208,6 +208,8 @@ sub info
 {
     my $self = shift;
 
+    return if $self->table_meta;
+
     my $sth = $self->db->prepare(" show tables ");
     $sth->execute or croak $sth->errstr;
 
@@ -221,7 +223,7 @@ sub info
         $meta{$t->[0]} = \%table;
     }
 
-    $self->meta(\%meta);
+    $self->table_meta(\%meta);
 }
 
 =pod
@@ -255,13 +257,10 @@ sub cols
 
 =pod
 
-=head2 meta
+=head2 table_meta
 
-Get all the table/column info for the current db.
+Get/set all the table/column info for the current db.
 
-=cut
-
-=pod
 
 =head2 create( I<opts> )
 
@@ -293,9 +292,12 @@ To index all columns:
 
  #TODO - make the column hash value the MetaRankBias for that column
 
-B<NOTE:> index() calls index_sql() internally to actually create each
+B<NOTE:> create() just loops over all the relevant tables and 
+calls index_sql() to actually create each
 index. If you want to tailor your SQL (using JOINs etc.) then you probably
-want to call index_sql() directly for each index you want created.
+want to call index_sql() directly.
+
+Returns number of rows indexed.
 
 =cut
 
@@ -312,8 +314,10 @@ sub create
     }
     else
     {
-        @tables = sort keys %{$self->meta};
+        @tables = sort keys %{$self->table_meta};
     }
+
+    my $count = 0;
 
   T: for my $table (@tables)
     {
@@ -326,18 +330,21 @@ sub create
         }
         else
         {
-            @cols = sort keys %{$self->meta->{$table}->{cols}};
+            @cols = sort keys %{$self->table_meta->{$table}->{cols}};
         }
 
-        $self->index_sql(
+        $count +=
+          $self->index_sql(
                        name => $table . ".index",
                        sql => "SELECT `" . join('`,`', @cols) . "` FROM $table",
                        table => $table,
                        desc  => $opts{tables}->{$table}->{desc} || {},
                        title => $opts{tables}->{$table}->{title} || ''
-        );
+          );
 
     }
+
+    return $count;
 
 }
 
@@ -370,6 +377,11 @@ to indexer.
 Which column to use as the title of the virtual document. If not
 defined, the title will be the empty string.
 
+=item desc
+
+Which columns to include in C<swishdescription> property. Default is none.
+Should be a hashref with column names as keys.
+
 =back
 
 %opts may contain any other param that SWISH::Prog::Index->new() accepts.
@@ -399,8 +411,6 @@ sub index_sql
     my $sth = $self->db->prepare($opts{sql});
     $sth->execute or croak "SELECT failed " . $sth->errstr;
 
-    $self->quiet or print STDOUT "Indexing $opts{table} ...                   ";
-
     while (my $row = $sth->fetchrow_hashref)
     {
 
@@ -412,8 +422,7 @@ sub index_sql
           : $self->title_filter($row);
 
         my $xml =
-          $self->row2xml($XMLer->tag_safe($opts{table}),
-                         $row, $title, \%opts);
+          $self->row2xml($XMLer->tag_safe($opts{table}), $row, $title, \%opts);
 
         my $doc =
           $self->docclass->new(
@@ -426,14 +435,9 @@ sub index_sql
                               );
 
         $self->index($doc);
-
-        $self->quiet
-          or print STDOUT "\b" x (length($counter) + 6), $counter, "  rows";
-
     }
 
-    $self->quiet
-      or print STDOUT "\b" x (length($counter) + 6), "  done        \n";
+    return $counter;
 
 }
 
@@ -514,6 +518,8 @@ B<NOTE:> This is different from the row() method in
 the ::Doc subclass. This row_filter() gets called before the Doc object
 is created.
 
+See FILTERS section.
+
 =cut
 
 sub row_filter
@@ -527,14 +533,104 @@ sub row_filter
 
 __END__
 
-=pod
+=head1 FILTERS
 
+There are several filtering methods in this module. Here's a summary of what they do
+and when they are called, so you have a better idea of how to best use them. Pay special
+attention to those called before converting the row to XML as opposed to after conversion.
+
+=head2 row_filter
+
+Called by index_sql() for each row fetched from the database. This is the first filter
+called in the chain. Called before the row is converted to XML.
+
+=head2 title_filter
+
+Called by index_sql() after row_filter() but only if an explicit C<title> opt param was not
+passed to index_sql(). Called before the row is converted to XML.
+
+=head2 SWISH::Prog::DBI::Doc *_filter() methods
+
+Each of the normal SWISH::Prog::Doc attributes has a *_filter() method. These are called
+after the row is converted to XML. See SWISH::Prog::Doc.
+
+B<NOTE:> There is not a SWISH::Prog::DBI::Doc row_filter() method.
+
+=head2 filter
+
+The normal SWISH::Prog filter() method is called as usual just before passing to ok()
+inside index(). Called after the row is converted to XML.
+
+
+=head1 ENCODINGS
+
+Since Swish-e version 2 does not support UTF-8 encodings, you may need to convert or
+transliterate your text prior to indexing. Swish-e offers the TranslateCharacters config
+option, but that does not work well with multi-byte characters.
+
+Here's one way to handle the issue. Use Search::Tools::Transliterate and the row_filter()
+method to convert your UTF-8 text to single-byte characters. You can do this by subclassing
+SWISH::Prog::DBI and overriding the row_filter() method.
+
+Example:
+
+ package My::DBI;
+ use base qw( SWISH::Prog::DBI );
+
+ use POSIX qw(locale_h);
+ use locale;
+ use Encode;
+ use Search::Tools::Transliterate;
+ my $trans = Search::Tools::Transliterate->new;
+ my ($charset) = (setlocale(LC_CTYPE) =~ m/^.+?\.(.+)/ || 'iso-8859-1');
+
+ sub row_filter
+ {
+    my $self = shift;
+    my $row  = shift;
+
+    # We transliterate everything in each row and append as a charset column.
+    # This means we can search for it but it'll not show in any property.
+    # Instead we'll get the UTF-8 text in the property value.
+    # The downside is that you can't do 'meta=asciitext' because the charset string
+    # is not stored under any but the swishdefault metaname.
+    # You could get around that by using MetaNameAlias in config() to alias
+    # each column to column_charset.
+    
+    for (keys %$row)
+    {
+        # if it's not already UTF-8, make it so.
+        unless ($trans->is_valid_utf8($row->{$_}))
+        {
+            $row->{$_} = Encode::encode_utf8(Encode::decode($charset, $row->{$_}, 1));
+        }
+        
+        # then transliterate to single-byte chars
+        $row->{$_ . '_' . $charset} = $trans->convert($row->{$_});
+    }
+
+ }
+
+ 1;
+ 
+ use My::DBI;
+ 
+ my $dbi_prog = My::DBI->new(
+                    config => SWISH::Config->new(     
+             # also use Swish-e's feature so that all text is searchable as ASCII
+                      TranslateCharacters => ':ascii:'
+                                ),
+                                
+                            );
+                            
+ $dbi_prog->create;
+                    
 
 =head1 SEE ALSO
 
 L<http://swish-e.org/docs/>
 
-SWISH::Prog, SWISH::Prog::DBI::Doc, Search::Tools::XML
+SWISH::Prog, SWISH::Prog::DBI::Doc, Search::Tools
 
 
 =head1 AUTHOR

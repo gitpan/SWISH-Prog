@@ -6,21 +6,22 @@ use warnings;
 use bytes;
 
 use Carp;
+
+# TODO could be redundant to 'use' all these since we use IO::All
 use File::Basename;
-use File::stat;
-use File::Slurp;
 use File::Type;
+use IO::All;
 use LWP::UserAgent;
 
 use SWISH::Filter;
 
 use SWISH::Prog::Doc;
 use SWISH::Prog::Index;
+use SWISH::Prog::Find;
 
 use base qw( Class::Accessor::Fast );
 
-our $VERSION = '0.02';
-our $Debug   = $ENV{PERL_DEBUG} || 0;
+our $VERSION = '0.03';
 our $ExtRE   = qr{(html|htm|xml|txt|pdf|ps|doc|ppt|xls|mp3)(\.gz)?}io;
 
 our %ParserTypes = (
@@ -37,20 +38,19 @@ our %ParserTypes = (
 );
 
 # methods SWISH::Prog::Index also uses
-our @IndexMeth = qw/ name verbose opts warnings exe debug /;
-
-
+# 0.03 added config here so Index->new inherits it
+our @IndexMeth = qw/ name verbose opts warnings exe debug config /;
 
 =pod
 
 =head1 NAME
 
-SWISH::Prog - Perlish interface to the Swish-e -S prog feature
+SWISH::Prog - build Swish-e programs
 
 =head1 SYNOPSIS
 
   # create a Prog module by subclassing SWISH::Prog and SWISH::Prog::Doc
-  package My::Prog;
+  package MyProg;
   use base qw( SWISH::Prog );
   
   sub ok
@@ -64,7 +64,7 @@ SWISH::Prog - Perlish interface to the Swish-e -S prog feature
   
   1;
   
-  package My::Prog::Doc;
+  package MyProg::Doc;
   use base qw( SWISH::Prog::Doc );
   
   # pass content untouched
@@ -72,7 +72,7 @@ SWISH::Prog - Perlish interface to the Swish-e -S prog feature
   1;
   
   # elsewhere:
-  use My::Prog;
+  use MyProg;
   use Carp;
   
   my $prog = My::Prog->new(
@@ -80,11 +80,12 @@ SWISH::Prog - Perlish interface to the Swish-e -S prog feature
                 opts    => '-W1 -v0',
                 config  => 'some/swish/config/file',
                 );
-  
-  # create @list_to_index somehow: File::Find, etc.
-  
-  for my $url ( @list_to_index )
+                
+  my $finder = $prog->find('some/dir');
+    
+  until($finder->done)
   {
+    my $url = $finder->next->stringify;
     if ( $prog->url_ok( $url ) )
     {
         if ( my $doc = $prog->fetch( $url ) )
@@ -104,24 +105,13 @@ SWISH::Prog - Perlish interface to the Swish-e -S prog feature
 SWISH::Prog is a framework for indexing document collections with Swish-e.
 This module is a collection of utility methods for writing your own applications.
 
-=head1 VARIABLES
-
-=over
-
-=item Debug
-
-Default is 0. Set to 1 (true) for verbage on stderr.
-
-=back
+B<The API is a work in progress and subject to change.>
 
 =head1 METHODS
 
 All of the following methods may be overridden when subclassing
 this module.
 
-=cut
-
-=pod
 
 =head2 new( %I<opts> )
 
@@ -170,8 +160,7 @@ See L<fh()>.
 
 =item debug
 
-Just like setting $Debug package variable, but only for the object
-instance.
+Print stuff on stderr.
 
 =item strict
 
@@ -184,7 +173,8 @@ content type against the actual content of the file.
 You may pass any other key/value pairs you want and deal with them
 by overriding init().
 
-You probably don't want to override new(). See init() and init_indexer() instead.
+You probably don't want to override new(). 
+See init() and init_indexer() instead.
 
 =cut
 
@@ -195,6 +185,7 @@ sub new
     bless($self, $class);
     $self->_init($class, @_);
     $self->init();
+    $self->_init_indexer();
     return $self;
 }
 
@@ -213,7 +204,19 @@ sub _init
     $self->{docclass} = $docclass;
 
     # make methods in $class's namespace
-    $class->mk_accessors(qw/ fh config ua debug strict indexer /, @IndexMeth );
+    $class->mk_accessors(
+        qw/
+          file_typer
+          swish_filter
+          fh
+          ua
+          debug
+          strict
+          indexer
+          /,
+
+        @IndexMeth
+    );
     $class->mk_ro_accessors(qw/ counter docclass /);
 
     # init params
@@ -224,20 +227,45 @@ sub _init
         @$self{keys %extra} = values %extra;
     }
 
-    $self->{debug} ||= $Debug || 0;
+    $self->{debug} ||= $ENV{PERL_DEBUG} || 0;
+
+    $self->{counter} = 0;
 
     # cache filter objects
-    $self->{swish_filter} = SWISH::Filter->new;
-    $self->{file_typer}   = File::Type->new;
+    $self->{swish_filter} ||= SWISH::Filter->new;
+    $self->{file_typer}   ||= File::Type->new;
 
     # new user agent for http requests
     $self->{ua} ||= LWP::UserAgent->new;
 
     # new config unless defined
-    $self->{config} ||= SWISH::Prog::Config->new(debug=>$self->debug);
+    $self->{config} ||= SWISH::Prog::Config->new(debug => $self->debug);
+
+    # make sure we've got an object in config()
+    unless (ref $self->{config} && $self->{config}->isa('SWISH::Prog::Config'))
+    {
+        my $f = $self->{config};
+        unless (-r $f)
+        {
+            croak "config file $f is not read-able: $!";
+        }
+        $self->{config} = SWISH::Prog::Config->new(debug => $self->debug);
+
+        # TODO test for ver2 vs. ver3 style
+        $self->{config}->read2($f);
+    }
+
+    # make sure debug flag inherits
+    $self->config->debug($self->debug) unless defined($self->config->debug);
+
+}
+
+sub _init_indexer
+{
 
     # open pipe to swish-e -S prog
     # and set filehandle accordlingly
+    my $self = shift;
 
     unless (exists $self->{fh})
     {
@@ -245,7 +273,7 @@ sub _init
     }
     else
     {
-        $self->indexer( SWISH::Prog::Index->new($self) );
+        $self->indexer(SWISH::Prog::Index->new($self));
     }
 
     # if fh = 0 or undef, default to stdout
@@ -253,8 +281,6 @@ sub _init
     $self->{fh} ||= *STDOUT{IO};
 
 }
-
-=pod
 
 =head2 init
 
@@ -266,10 +292,25 @@ Only the object is passed. Return value is ignored.
 
 The basic initialization order is:
 
- _init()  - private internal method
- init_indexer - public method
- init()   - public method
- 
+=over
+
+=item _init()
+
+Private internal method. Blesses object and sets up sane defaults based
+on args to new().
+
+=item init()
+
+Public method. Initalize your object beyond the default _init(). The base
+init() does nothing.
+
+=item init_indexer
+
+Public method. Sets indexer() and fh(). Override this method in your subclass
+to customize config() or anything else that should be done after init() and
+before the C<swish-e> index is opened.
+
+=back
 
 =cut
 
@@ -280,16 +321,12 @@ sub init
     1;
 }
 
-=pod
-
 =head2 init_indexer
 
 Creates and caches a SWISH::Prog::Index object in indexer(), and sets fh().
 You can override this method if you want to customize the order
 of when the index is opened for writing, or want to pass specific
 options to the S::P::Index new() method.
-
-This method is called as the last step during internal initialization.
 
 =cut
 
@@ -299,8 +336,6 @@ sub init_indexer
     $self->indexer(SWISH::Prog::Index->new($self)->run);
     $self->fh($self->indexer->fh);
 }
-
-=pod
 
 =head2 DESTROY
 
@@ -324,8 +359,6 @@ sub DESTROY
 }
 
 # pod only; method created with Class::Accessor
-
-=pod
 
 =head2 fh( [ I<filehandle> ] )
 
@@ -363,11 +396,6 @@ Get/set debug flag. See new().
 
 SWISH::Prog::Index object. Set in init_indexer().
 
-=cut
-
-# end pod-only
-
-=pod
 
 =head2 remote( I<URL> )
 
@@ -381,8 +409,6 @@ fetch file:// URLs just like any other URL.
 =cut
 
 sub remote { $_[1] =~ m!^[\w]+://! }
-
-=pod
 
 =head2 fetch( I<URL> )
 
@@ -403,6 +429,7 @@ sub fetch
     if ($self->remote($url))
     {
 
+        # TODO maybe use IO::All to do this too.
         my $response = $self->{ua}->get($url);
 
         if ($response->is_success)
@@ -426,11 +453,11 @@ sub fetch
         # can we trust content_type() from UA?
         if ($self->strict)
         {
-            my $mime = $self->{file_typer}->checktype_contents($doc{content});
+            my $mime = $self->file_typer->checktype_contents($doc{content});
             if ($mime ne $doc{type})
             {
-                carp
-                  "Warning: http header says Content-type=$doc{type} but content looks like $mime"
+                carp "Warning: http header says Content-type=$doc{type} "
+                  . "but content looks like $mime. "
                   . "We're using $mime";
 
                 $doc{type} = $mime;
@@ -440,27 +467,34 @@ sub fetch
     }
     else
     {
-        my $buf  = read_file($url);
-        my $stat = stat($url);
+        my $buf;
+        my $io = io($url);
+        eval { $buf = $io->utf8->all };
+        if ($@)
+        {
+            carp "unable to read $url - skipping";
+            return;
+        }
+
         %doc = (
                 url     => $url,
-                modtime => $stat->mtime,
+                modtime => $io->mtime,
                 content => $buf,
-                type    => $self->{file_typer}->checktype_contents($buf),
-                size    => $stat->size,
+                type    => $self->file_typer->checktype_contents($buf),
+                size    => $io->size,
                );
     }
 
     $doc{parser} = $ParserTypes{$doc{type}} || $ParserTypes{default};
 
-    if ($self->{swish_filter}->can_filter($doc{type}))
+    if ($self->swish_filter->can_filter($doc{type}))
     {
         my $f =
-          $self->{swish_filter}->convert(
-                                         document     => $doc{content},
-                                         content_type => $doc{type},
-                                         name         => $doc{url}
-                                        );
+          $self->swish_filter->convert(
+                                       document     => $doc{content},
+                                       content_type => $doc{type},
+                                       name         => $doc{url}
+                                      );
 
         if (!$f || !$f->was_filtered || $f->is_binary) # is is_binary necessary?
         {
@@ -483,7 +517,37 @@ sub fetch
     return $self->docclass->new(%doc);
 }
 
-=pod
+=head2 find( I<path> )
+
+Returns a SWISH::Prog::Find object.
+See SWISH::Prog::Find for more details.
+
+=cut
+
+sub find
+{
+    my $self = shift;
+    my $path = shift or croak "path required in find()";
+
+    return SWISH::Prog::Find->new(
+        follow_symlinks => $self->config->FollowSymLinks
+          || 0,
+        depth => $self->config->RecursionDepth
+          || 0,
+        breadth_first => 1,
+        root          => $path,
+
+        # TODO any other configs to pass?
+        # might be wise to pass interesting() to skip
+        # based on FileRules etc.
+
+                                 );
+}
+
+=head2 spider B<NOT YET IMPLEMENTED>
+
+Returns a SWISH::Prog::Spider object.
+
 
 =head2 ok( I<doc_object> )
 
@@ -501,8 +565,6 @@ sub ok
 
     return $self->content_ok($doc);
 }
-
-=pod
 
 =head2 content_ok( I<doc_object> )
 
@@ -524,8 +586,6 @@ sub content_ok
     return length($doc->content);
 }
 
-=pod
-
 =head2 url_ok( I<URL> )
 
 Check I<URL> before fetch()ing it.
@@ -541,7 +601,7 @@ sub url_ok
     my $self = shift;
     my $url  = shift;
 
-    $self->{debug} and carp "checking file $url";
+    $self->debug and carp "checking file $url";
 
     if ($self->remote($url))
     {
@@ -561,14 +621,12 @@ sub url_ok
         return 0 unless $ext;
         return 0 if $url =~ m!/(\.svn|RCS)/!;
 
-        $Debug and carp "passed tests";
+        $self->debug and carp "passed tests";
 
     }
 
     return 1;
 }
-
-=pod
 
 =head2 index( I<doc_object> )
 
@@ -601,8 +659,6 @@ sub index
     1;
 }
 
-=pod
-
 =head2 filter( I<doc_object> )
 
 Filter I<doc_object> before indexing. filter() is called by index()
@@ -623,11 +679,12 @@ sub filter
     1;
 }
 
+# utility used by S::P::I
+sub _index_methods { return @IndexMeth }
+
 1;
 __END__
 
-
-=pod
 
 
 =head1 SEE ALSO
@@ -636,10 +693,8 @@ L<http://swish-e.org/>
 
 SWISH::Prog::Doc,
 SWISH::Prog::Headers,
-SWISH::Prog::Index.
-SWISH::Prog::Config,
-SWISH::DBI,
-SWISH::Mail
+SWISH::Prog::Index,
+SWISH::Prog::Config
 
 
 =head1 AUTHOR
@@ -655,5 +710,3 @@ module.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
-
-=cut
