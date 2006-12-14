@@ -3,20 +3,23 @@ package SWISH::Prog::Doc;
 use strict;
 use warnings;
 use Carp;
-use Data::Dumper;
-
 use base qw( Class::Accessor::Fast );
 
-use 5.8.0;
-use bytes;    # must have Perl > 5.8
+use POSIX qw(locale_h);
+use locale;
+
 use overload('""'     => \&as_string,
              fallback => 1,);
 
 use SWISH::Prog::Headers;
 
-our $VERSION = '0.02';
+our $VERSION = '0.04';
 
-my @Attr = qw/ url modtime type parser content update debug size /;
+my @Attr = qw( url modtime type parser content update debug size charset );
+__PACKAGE__->mk_accessors(@Attr);
+my $locale = setlocale(LC_CTYPE);
+my ($lang, $charset) = split(m/\./, $locale);
+$charset ||= 'iso-8859-1';
 
 =pod
 
@@ -113,6 +116,8 @@ All of the following params are also available as accessors/mutators.
 
 =item debug
 
+=item charset
+
 =back
 
 =cut
@@ -122,15 +127,9 @@ sub new
     my $class = shift;
     my $self  = {};
     bless($self, $class);
-
-    # make methods in $class's namespace
-    # quick test shows this only adds 0.0002 sec of overhead vs defining ourselves
-    $class->mk_accessors(@Attr);
-
     $self->_init(@_);
     $self->init();
     $self->filters();
-
     return $self;
 }
 
@@ -145,7 +144,7 @@ sub _init
     }
 
     $self->{debug} ||= $ENV{PERL_DEBUG} || 0;
-
+    $self->{charset} ||= $charset;
 }
 
 =head2 filters
@@ -179,12 +178,7 @@ object. Called in new() after private initialization and before filters().
 
 =cut
 
-sub init
-{
-    my $self = shift;
-
-    1;
-}
+sub init { }
 
 =head2 as_string
 
@@ -243,9 +237,7 @@ __END__
 
 L<http://swish-e.org/docs/>
 
-SWISH::Prog::MIME,
-SWISH::Prog::Headers,
-SWISH::Prog::Parser
+SWISH::Prog::Headers
 
 
 =head1 AUTHOR

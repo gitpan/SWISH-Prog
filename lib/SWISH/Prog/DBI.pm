@@ -13,7 +13,7 @@ use base qw( SWISH::Prog );
 
 __PACKAGE__->mk_accessors(qw/ table_meta db title alias_columns /);
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 our $XMLer   = Search::Tools::XML->new;
 
 =pod
@@ -119,7 +119,8 @@ sub init
 
     # unless metanames are defined, use all the column names from all
     # our discovered tables.
-    unless ($self->config->MetaNames)
+    my $m = $self->config->MetaNames;
+    unless (@$m)
     {
         for my $table (keys %{$self->table_meta})
         {
@@ -169,26 +170,6 @@ sub init_indexer
 
 }
 
-=pod
-
-=head2 DESTROY
-
-Calls the DBI disconnect() method on the cached dbh before
-calling the SWISH::Prog::DESTROY method.
-
-B<NOTE:> Internal method only.
-
-=cut
-
-sub DESTROY
-{
-    my $self = shift;
-    $self->db->disconnect
-      or croak "can't close db connection " . $self->db->{Name} . ": $!\n";
-
-    # pass on to base class
-    $self->SUPER::DESTROY();    # funny name...
-}
 
 # basic flow:
 # get db meta: table names and column names
@@ -224,6 +205,7 @@ sub info
     }
 
     $self->table_meta(\%meta);
+    $sth->finish;
 }
 
 =pod
@@ -251,7 +233,9 @@ sub cols
         $cols{$colname} = {type => 1};
 
     }
-
+    
+    $sth->finish;
+    
     return \%cols;
 }
 
@@ -436,6 +420,8 @@ sub index_sql
 
         $self->index($doc);
     }
+    
+    $sth->finish;
 
     return $counter;
 

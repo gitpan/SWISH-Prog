@@ -7,6 +7,8 @@ use Carp;
 
 use bytes;
 
+our $VERSION = '0.02';
+
 # NOTE this does not work.
 # instead we require perl > 5.8 and just use bytes straight up.
 # see http://www.perlmonks.org/?node=405917
@@ -42,9 +44,10 @@ our %Headers = (
     P => {
           url     => 'Content-Location',
           modtime => 'Last-Modified',      # but in epoch seconds
-          parser  => 'Document-Type',
+          parser  => 'Parser-Type',
           type    => 'Content-Type',
           update  => 'Update-Mode',
+          mime    => 'Content-Type',
          }
 
 );
@@ -61,22 +64,22 @@ sub head
 
     my $size = length($buf);    #length in bytes, not chars
 
-    if ($Debug)
-    {
-        carp "length = $size";
-        {
-            no bytes;
-            carp "num chars = " . length($buf);
-            if ($Debug > 9)
-            {
-                my $c = 0;
-                for (split(//, $buf))
-                {
-                    carp ++$c . "  $_   = " . ord($_);
-                }
-            }
-        }
-    }
+    #    if ($Debug > 2)
+    #    {
+    #        carp "length = $size";
+    #        {
+    #            no bytes;
+    #            carp "num chars = " . length($buf);
+    #            if ($Debug > 20)
+    #            {
+    #                my $c = 0;
+    #                for (split(//, $buf))
+    #                {
+    #                    carp ++$c . "  $_   = " . ord($_);
+    #                }
+    #            }
+    #        }
+    #    }
 
     my @h = ("Content-Length: $size");
 

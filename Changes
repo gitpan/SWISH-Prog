@@ -37,3 +37,14 @@ Revision history for Perl extension Prog.
         * S::P::Config now requires IO::All and Config::General; added read2() method.
         * new feature placeholder: SWISH::Prog::Spider
         
+0.04    * S::P::DBI no longer calls disconnect() on db handle in DESTROY
+        * fixed bug with auto-defining metanames
+        * S::P::Config always returns arrayref on directive method calls
+        * use MIME::Types instead of File::Type
+        * S::P::Find now uses File::Find instead of Path::Class::Iterator
+        * S::P::Object obj_filter() must return an object of some kind
+        * S::P::Object will not dump() scalar strings, thus avoiding extra quotes
+        * S::P::Config added stringify() method and reverted from IO::All to File::Slurp
+        * S::Prog added elapsed() method
+        * S::Prog new() verbose now defaults to 1
+

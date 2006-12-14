@@ -10,7 +10,7 @@ our $VERSION = '0.01';
 
 =head1 NAME
 
-SWISH::Prog::Object::Doc - index Perl objects records with Swish-e
+SWISH::Prog::Object::Doc - index Perl objects with Swish-e
 
 =head1 SYNOPSIS
 

@@ -8,13 +8,13 @@ use File::Copy "move";
 
 use SWISH::Prog::Config;
 
-use base qw/ Exporter Class::Accessor::Fast /;
-our @EXPORT = qw/ go /;
+use base qw( Exporter Class::Accessor::Fast );
+our @EXPORT = qw( go );
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 __PACKAGE__->mk_accessors(
-    qw/
+    qw(
       name
       config
       fh
@@ -27,7 +27,7 @@ __PACKAGE__->mk_accessors(
       opts
       format
 
-      /
+      )
 );
 
 =pod
@@ -333,8 +333,8 @@ sub run
 
     open(SWISH, "| $cmd") or croak "can't exec $cmd: $!\n";
 
-    # must print UTF-8 as is even if swish-e v2 won't index it as UTF-8
-    binmode(SWISH, ':utf8');
+    # must print bytes as is even if swish-e v2 won't index it as UTF-8
+    binmode(SWISH, ':raw');
 
     $self->fh(*SWISH{IO});
 

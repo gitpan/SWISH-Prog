@@ -12,7 +12,7 @@ use base qw( SWISH::Prog );
 
 __PACKAGE__->mk_accessors(qw/ methods class title url modtime class_meta /);
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 our $XMLer   = Search::Tools::XML->new;
 
 =pod
@@ -173,9 +173,15 @@ sub init_indexer
 {
     my $self = shift;
 
-    (my $class_meta = $self->class) =~ s,\W,.,g;
+    (my $class_meta = $self->class) =~ s/\W/\./g;
     $self->class_meta($class_meta);
-    $self->config->MetaNames($class_meta, @{$self->methods});
+    
+    # make urls find-able (really should adjust WordCharacters too...)
+    $self->config->MaxWordLimit(256);
+
+    # similar to DBI, we alias top-level tag so all words are find-able via swishdefault
+    $self->config->MetaNameAlias('swishdefault ' . $class_meta);
+    $self->config->MetaNames(@{$self->methods});
 
     $self->config->PropertyNames(@{$self->methods});
     $self->config->PropertyNamesNoStripChars(@{$self->methods});
@@ -246,7 +252,7 @@ sub _index
     my $urlmeth     = $self->url;
     my $modtimemeth = $self->modtime;
 
-    $self->obj_filter($o);
+    $o = $self->obj_filter($o);
 
     my $title =
         $o->can($titlemeth)
@@ -300,10 +306,13 @@ sub obj2xml
 
     for my $m (@{$self->methods})
     {
-        my @x = (
-                 $XMLer->start_tag($m), $XMLer->utf8_safe(dump($o->$m)),
-                 $XMLer->end_tag($m)
-                );
+
+        # if $m value is a scalar string, we don't want to
+        # dump() it since that'll add quotes we don't want.
+        my $v = ref $o->$m ? dump($o->$m) : $o->$m;
+
+        my @x =
+          ($XMLer->start_tag($m), $XMLer->utf8_safe($v), $XMLer->end_tag($m));
 
         $xml .= join('', @x);
     }
@@ -312,7 +321,6 @@ sub obj2xml
     $self->debug and print STDOUT $xml . "\n";
 
     return $xml;
-
 }
 
 =head2 obj_filter( I<object> )
@@ -326,12 +334,30 @@ B<NOTE:> This is different from the obj() method in
 the ::Doc subclass. This obj_filter() gets called before the Doc object
 is created.
 
+B<IMPORTANT:> This method B<MUST> return an object. It can either be the same
+object I<object> that was passed in, or a different object altogether. An example
+might be if you took data from I<object> and created a new object in a different
+class (or even the same one).
+
+Example:
+
+ sub obj_filter
+ {
+    my ($prog,$obj) = @_;
+    
+    my $newobj = SomeClass->new;
+    $newobj->foo( $obj->bar );
+    
+    return $newobj; # MUST return an object. Need not be $obj
+ }
+
 =cut
 
 sub obj_filter
 {
     my $self = shift;
     my $obj  = shift;
+    return $obj;
 
 }
 

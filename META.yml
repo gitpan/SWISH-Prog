@@ -1,7 +1,7 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         SWISH-Prog
-version:      0.03
+version:      0.04
 version_from: lib/SWISH/Prog.pm
 installdirs:  site
 requires:
@@ -11,8 +11,8 @@ requires:
     File::Basename:                0.01
     File::Copy:                    0.01
     File::Temp:                    0.01
-    File::Type:                    0.01
     IO::All:                       0.01
+    MIME::Types:                   0.01
     Path::Class::Iterator:         0.04
     Search::Tools:                 0.01
     SWISH::Filter:                 0.07

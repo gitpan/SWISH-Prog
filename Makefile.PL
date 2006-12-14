@@ -8,7 +8,7 @@ WriteMakefile(
         'Search::Tools'         => '0.01',
         'File::Basename'        => '0.01',
         'IO::All'               => '0.01',
-        'File::Type'            => '0.01',
+        'MIME::Types'           => '0.01',
         'File::Copy'            => '0.01',
         'SWISH::Filter'         => '0.07',
         'Class::Accessor::Fast' => '0.01',

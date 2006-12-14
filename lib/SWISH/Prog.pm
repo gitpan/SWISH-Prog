@@ -1,27 +1,27 @@
 package SWISH::Prog;
 
-use 5.8.0;
+use 5.8.3;
 use strict;
 use warnings;
 use bytes;
 
 use Carp;
+use Data::Dump qw(pp);
 
-# TODO could be redundant to 'use' all these since we use IO::All
 use File::Basename;
-use File::Type;
-use IO::All;
+use File::Slurp;
 use LWP::UserAgent;
 
+use MIME::Types;
 use SWISH::Filter;
 
+use SWISH::Prog::Config;
 use SWISH::Prog::Doc;
 use SWISH::Prog::Index;
-use SWISH::Prog::Find;
 
 use base qw( Class::Accessor::Fast );
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 our $ExtRE   = qr{(html|htm|xml|txt|pdf|ps|doc|ppt|xls|mp3)(\.gz)?}io;
 
 our %ParserTypes = (
@@ -81,23 +81,7 @@ SWISH::Prog - build Swish-e programs
                 config  => 'some/swish/config/file',
                 );
                 
-  my $finder = $prog->find('some/dir');
-    
-  until($finder->done)
-  {
-    my $url = $finder->next->stringify;
-    if ( $prog->url_ok( $url ) )
-    {
-        if ( my $doc = $prog->fetch( $url ) )
-        {
-            $prog->index( $doc );   
-        }
-        else
-        {
-           carp "skipping $url";
-        }
-    }
-  }
+  $prog->find('some/dir');
           
 
 =head1 DESCRIPTION
@@ -205,7 +189,7 @@ sub _init
 
     # make methods in $class's namespace
     $class->mk_accessors(
-        qw/
+        qw(
           file_typer
           swish_filter
           fh
@@ -213,11 +197,11 @@ sub _init
           debug
           strict
           indexer
-          /,
+          ),
 
         @IndexMeth
     );
-    $class->mk_ro_accessors(qw/ counter docclass /);
+    $class->mk_ro_accessors(qw( counter docclass ));
 
     # init params
     $self->{'_start'} = time;
@@ -227,13 +211,15 @@ sub _init
         @$self{keys %extra} = values %extra;
     }
 
+    $self->{verbose} = 1 unless defined $self->{verbose};
+
     $self->{debug} ||= $ENV{PERL_DEBUG} || 0;
 
     $self->{counter} = 0;
 
     # cache filter objects
     $self->{swish_filter} ||= SWISH::Filter->new;
-    $self->{file_typer}   ||= File::Type->new;
+    $self->{file_typer}   ||= MIME::Types->new;
 
     # new user agent for http requests
     $self->{ua} ||= LWP::UserAgent->new;
@@ -408,9 +394,9 @@ fetch file:// URLs just like any other URL.
 
 =cut
 
-sub remote { $_[1] =~ m!^[\w]+://! }
+sub remote { $_[1] =~ m!^[\w]+://!o }
 
-=head2 fetch( I<URL> )
+=head2 fetch( I<URL> [, I<stat_ref>, I<file_ext>] )
 
 Retrieve I<URL> either via HTTP or from filesystem.
 
@@ -419,17 +405,20 @@ for how to subclass SWISH::Prog::Doc.
 
 =cut
 
+my %ext_to_mime = ();    # cache to avoid hitting MIME::Type each time
+
 sub fetch
 {
     my $self = shift;
     my $url  = shift;
+    my $stat = shift;
+    my $ext  = shift;
 
     my %doc = ();
 
     if ($self->remote($url))
     {
 
-        # TODO maybe use IO::All to do this too.
         my $response = $self->{ua}->get($url);
 
         if ($response->is_success)
@@ -448,12 +437,9 @@ sub fetch
             croak $response->status_line;    # can catch with eval()
         }
 
-        # TODO do we need to double-check content-type
-        # against content() with file_typer ?
-        # can we trust content_type() from UA?
         if ($self->strict)
         {
-            my $mime = $self->file_typer->checktype_contents($doc{content});
+            my $mime = $self->file_typer->mimeTypeOf($url);
             if ($mime ne $doc{type})
             {
                 carp "Warning: http header says Content-type=$doc{type} "
@@ -468,20 +454,44 @@ sub fetch
     else
     {
         my $buf;
-        my $io = io($url);
-        eval { $buf = $io->utf8->all };
+        
+        # the parser->slurp is about 30% faster.
+        if ($self->can('parser') and $self->parser->isa('SWISH::Parser'))
+        {
+            eval { $buf = $self->parser->slurp_file($url) };
+        }
+        else
+        {
+            eval { $buf = read_file($url, binmode => ':raw') };
+        }
         if ($@)
         {
             carp "unable to read $url - skipping";
             return;
         }
 
+        $stat ||= [stat($url)];
+
+        # cache the mime type as a string
+        # to avoid the MIME::Type::type() stringification
+        my $type;
+        if ($ext)
+        {
+            $ext_to_mime{$ext} ||= $self->file_typer->mimeTypeOf($url) . "";
+            $type = $ext_to_mime{$ext};
+        }
+        else
+        {
+            $type = $self->file_typer->mimeTypeOf($url) . "";
+        }
+
         %doc = (
                 url     => $url,
-                modtime => $io->mtime,
+                modtime => $stat->[9],
                 content => $buf,
-                type    => $self->file_typer->checktype_contents($buf),
-                size    => $io->size,
+                type    => $type,
+                size    => $stat->[7],
+                debug   => $self->debug
                );
     }
 
@@ -491,12 +501,14 @@ sub fetch
     {
         my $f =
           $self->swish_filter->convert(
-                                       document     => $doc{content},
+                                       document     => \$doc{content},
                                        content_type => $doc{type},
                                        name         => $doc{url}
                                       );
 
-        if (!$f || !$f->was_filtered || $f->is_binary) # is is_binary necessary?
+        if (   !$f
+            || !$f->was_filtered
+            || $f->is_binary)    # is is_binary necessary?
         {
             carp "skipping $doc{url} - filtering error";
             return;
@@ -517,31 +529,16 @@ sub fetch
     return $self->docclass->new(%doc);
 }
 
-=head2 find( I<path> )
+=head2 find( @I<paths> )
 
-Returns a SWISH::Prog::Find object.
-See SWISH::Prog::Find for more details.
+Use SWISH::Prog::Find to traverse @I<paths>.
 
 =cut
 
 sub find
 {
-    my $self = shift;
-    my $path = shift or croak "path required in find()";
-
-    return SWISH::Prog::Find->new(
-        follow_symlinks => $self->config->FollowSymLinks
-          || 0,
-        depth => $self->config->RecursionDepth
-          || 0,
-        breadth_first => 1,
-        root          => $path,
-
-        # TODO any other configs to pass?
-        # might be wise to pass interesting() to skip
-        # based on FileRules etc.
-
-                                 );
+    require SWISH::Prog::Find;
+    SWISH::Prog::Find::files(@_);
 }
 
 =head2 spider B<NOT YET IMPLEMENTED>
@@ -592,6 +589,8 @@ Check I<URL> before fetch()ing it.
 
 Returns 0 if I<URL> should be skipped.
 
+Returns file extension of I<URL> if I<URL> should be processed.
+
 =cut
 
 sub url_ok
@@ -600,8 +599,11 @@ sub url_ok
     # TODO read from $self->config to determine opts to check
     my $self = shift;
     my $url  = shift;
+    my $stat = shift;
 
-    $self->debug and carp "checking file $url";
+    $self->debug and print "checking file $url\n";
+
+    my ($file, $path, $ext);
 
     if ($self->remote($url))
     {
@@ -610,22 +612,44 @@ sub url_ok
     else
     {
 
-        # TODO get regex from ->config
-        my ($file, $path, $ext) = fileparse($url, $ExtRE);
+        # TODO build regex from ->config
+        ($file, $path, $ext) = fileparse($url, $ExtRE);
 
         #carp "parsed file: $file\npath: $path\next: $ext";
 
-        #return 0 unless -r $url;
-        return 0 if -d $url;
+        $stat ||= [stat($url)];
+        return 0 unless -r _;
+        return 0 if -d _;
         return 0 if $file =~ m/^\./;
         return 0 unless $ext;
         return 0 if $url =~ m!/(\.svn|RCS)/!;
 
-        $self->debug and carp "passed tests";
+        $self->debug and print "  $url -> ok\n";
 
     }
 
-    return 1;
+    return $ext;
+}
+
+=head2 dir_ok( I<directory> )
+
+Called by find() for all directories. You can control
+the recursion into I<directory> via the config() params
+
+ TODO
+ 
+=cut
+
+sub dir_ok
+{
+    my $self = shift;
+    my $dir  = shift;
+    my $stat = shift || [stat($dir)];
+    return 0 unless -d _;
+    return 0 if $dir =~ m!/\.!;
+    return 0 if $dir =~ m/^\./;
+
+    1;    # TODO esp RecursionDepth
 }
 
 =head2 index( I<doc_object> )
@@ -650,6 +674,8 @@ sub index
 
     $self->filter($doc);
     $self->ok($doc) or return;
+
+    carp pp($doc) if $self->debug;
 
     print {$self->fh} $doc
       or croak "failed to print to filehandle " . $self->fh . ": $!\n";
@@ -679,6 +705,17 @@ sub filter
     1;
 }
 
+=head2 elapsed
+
+Returns the elapsed time in seconds since object was created.
+
+=cut
+
+sub elapsed
+{
+    return time() - shift->{_start};
+}
+
 # utility used by S::P::I
 sub _index_methods { return @IndexMeth }
 
@@ -700,6 +737,9 @@ SWISH::Prog::Config
 =head1 AUTHOR
 
 Peter Karman, E<lt>perl@peknet.comE<gt>
+
+Many of the API ideas here are gleaned from Bill Moseley's DirTree.pl
+and spider.pl scripts in Swish-e 2.x.
 
 =head1 COPYRIGHT AND LICENSE
 

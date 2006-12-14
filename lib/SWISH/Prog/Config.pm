@@ -56,11 +56,13 @@ use strict;
 use warnings;
 use Carp;
 use Config::General;
-use IO::All;
-use Data::Dump qw/dump/;
-use File::Temp qw/ tempfile /;
+use File::Slurp;
+use Data::Dump qw( dump );
+use File::Temp qw( tempfile );
 use Search::Tools::XML;
 use Path::Class qw();    # we have our own file() method
+use overload('""'     => \&stringify,
+             fallback => 1,);
 
 our $VERSION = '0.02';
 
@@ -75,7 +77,7 @@ my %unique = map { $_ => 1 } qw(
 
   );
 
-my @Ver2C = qw/
+my @Opts = qw/
 
   AbsoluteLinks
   BeginCharacters
@@ -155,6 +157,7 @@ my @Ver2C = qw/
   UseStemming
   UseWords
   WordCharacters
+  Words
   XMLClassAttributes
 
   /;
@@ -174,22 +177,23 @@ sub _init
     my $self = shift;
     $self->{'_start'} = time;
 
-    $self->mk_accessors(qw/ file debug /, @Ver2C);
+    $self->mk_accessors(qw/ file debug /, @Opts);
 
     if (@_)
     {
         my %extra = @_;
         $self->$_($extra{$_}) for keys %extra;
     }
-    
-    $self->IgnoreTotalWordCountWhenRanking(0) unless defined $self->IgnoreTotalWordCountWhenRanking;
+
+    $self->IgnoreTotalWordCountWhenRanking(0)
+      unless defined $self->IgnoreTotalWordCountWhenRanking;
 }
 
 sub set
 {
     my $self = shift;
     my ($key, $val, $append) = @_;
-
+    
     if ($key eq 'file' or $key eq 'debug')
     {
         return $self->{$key} = $val;
@@ -244,17 +248,20 @@ sub _name_hash
     {
 
         #carp "setting $name => " . join(', ', @_);
-        for (@_)
+        for my $v (@_)
         {
-            $self->{$name}->{lc($_)} = 1;
+            my @v = ref $v ? @$v : ($v);
+            $self->{$name}->{lc($_)} = 1 for @v;
         }
     }
     else
     {
 
         #carp "getting $name -> " . join(', ', sort keys %{$self->{$name}});
-        return (sort keys %{$self->{$name}});
+
     }
+
+    return [sort keys %{$self->{$name}}];
 }
 
 =head2 read2( I<path/file> )
@@ -281,7 +288,7 @@ sub read2
     my $file = shift or croak "version2 type file required";
 
     my $buf =
-      io($file)->all;    # can't read as UTF8 since version2 doesn't support it
+      read_file($file);   # can't read as UTF8 since version2 doesn't support it
 
     # filter include syntax to work with Config::General's
     $buf =~ s,IncludeConfigFile (.+?)\n,<<include $1>>\n,g;
@@ -337,28 +344,60 @@ sub write2
         ($file, $path) = tempfile();
     }
 
+    my $buf = $self->stringify;
+    write_file($file, $buf);
+
+    print STDERR "wrote config file $path using $file" if $self->debug;
+
+    # remember file
+    $self->file($path);
+
+    return $path;
+}
+
+=head2 as_hash
+
+Returns current Config object as a hash ref.
+
+=cut
+
+sub as_hash
+{
+    my $self = shift;
+    my $c = Config::General->new(-String => $self->stringify);
+    return {$c->getall};
+}
+
+=head2 stringify
+
+Returns object as version 2 formatted scalar.
+
+This method is used to overload the object for printing, so these are
+equivalent:
+
+ print $config->stringify;
+ print $config;
+
+=cut
+
+sub stringify
+{
+    my $self = shift;
     my @config;
 
     # must pass metanames and properties first, since others may depend on them
     # in swish config parsing.
     for my $method (keys %unique)
     {
-        my @v = $self->$method;
+        my $v = $self->$method;
 
-        next unless scalar(@v);
+        next unless scalar(@$v);
 
-        #carp "checking $_ => $method: " . join(', ', @v);
-        # can't just check $self->$method for TRUE
-        # must get @v instead
-        if (@v)
-        {
-
-            #carp "adding $_ to config";
-            push(@config, "$method " . join(' ', @v));
-        }
+        #carp "adding $method to config";
+        push(@config, "$method " . join(' ', @$v));
     }
 
-    for my $name (@Ver2C)
+    for my $name (@Opts)
     {
         next if exists $unique{$name};
 
@@ -378,17 +417,9 @@ sub write2
 
     print STDERR $buf if $self->debug;
 
-    $self->_write_utf8($file, $buf);
-
-    print STDERR "wrote config file $path using $file" if $self->debug;
-
-    # remember file
-    $self->file($path);
-
-    return $path;
+    return $buf;
 }
 
-# IO::All can't seem to write to a filehandle (or else I can't discern the syntax)
 sub _write_utf8
 {
     my ($self, $file, $buf) = @_;
@@ -407,12 +438,14 @@ B<NOTE:> This API is liable to change as SWISH::Config is developed.
 
   my $xmlconf = $config->ver2_to_xml( 'my/file.config' );
 
+If I<file> is omitted, uses the current values in the calling object.
+
 =cut
 
 sub ver2_to_xml
 {
     my $self = shift;
-    my $file = shift or croak "version2 type file required";
+    my $file = shift;
 
     # list of config directives that take arguments to the opt value
     # i.e. the directive has 3 or more parts
@@ -430,16 +463,17 @@ sub ver2_to_xml
       FileFilter
       FileRules
       ReplaceRules
+      Words
 
       );
 
-    my $config = $self->new->read2($file);
+    my $config = $file ? $self->new->read2($file) : $self->as_hash;
     my $time   = localtime();
 
     # TODO  what if this encoding is not correct?
     my $xml = <<EOF;
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- converted from $file at $time -->
+<!-- converted with SWISH::Prog::Config ver2_to_xml() $time -->
 <swishconfig>
 EOF
 

@@ -27,7 +27,7 @@ This module requires these other modules and libraries:
   File::Temp
   File::Copy
   File::Basename
-  File::Type
+  MIME::Types
   Data::Dump
   LWP::UserAgent
   Path::Class
