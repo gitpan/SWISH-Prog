@@ -27,8 +27,8 @@ ok(
         class   => __PACKAGE__,
         methods => [@meth],
         title   => 'one',
-        name    => 'swishobjects'
-
+        name    => 'swishobjects',
+        #debug   => 1,
         #verbose => 3,
         #warnings => 9,
         #opts => '-T indexed_words'

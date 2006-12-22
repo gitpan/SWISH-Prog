@@ -16,6 +16,7 @@ WriteMakefile(
         'Data::Dump'            => '0.01',
         'Path::Class::Iterator' => '0.04',
         'Config::General'       => '2.31',
+        'YAML::Syck'            => '0.72',
 
     },    # e.g., Module::Name => 1.1
     (

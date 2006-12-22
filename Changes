@@ -48,3 +48,6 @@ Revision history for Perl extension Prog.
         * S::Prog added elapsed() method
         * S::Prog new() verbose now defaults to 1
 
+0.05    * S::P::Object now uses JSON or YAML to serialize values instead of Data::Dump
+          This change is sych'd with SWISH::API::Object 0.0.6
+

@@ -4,15 +4,21 @@ use strict;
 use warnings;
 
 use Carp;
-use Data::Dump qw/dump/;
+use Data::Dump qw( dump );
+
+# both these next modules are provided if you install YAML::Syck
+use YAML::Syck ();
+use JSON::Syck ();
+
 use Search::Tools::XML;
 use SWISH::Prog::Object::Doc;
 
 use base qw( SWISH::Prog );
 
-__PACKAGE__->mk_accessors(qw/ methods class title url modtime class_meta /);
+__PACKAGE__->mk_accessors(
+                qw( methods class title url modtime class_meta serial_format ));
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 our $XMLer   = Search::Tools::XML->new;
 
 =pod
@@ -127,6 +133,12 @@ Which method to use as the B<swishdocpath> value. Defaults to C<url>.
 Which method to use as the B<swishlastmodified> value. Defaults to Perl built-in
 time().
 
+=item serial_format
+
+Which format to use in serialize(). Default is C<yaml>. You can also use C<json>.
+If you don't like either of those, subclass SWISH::Prog::Object and override
+serialize() to provide your own format.
+
 =back
 
 =head2 init
@@ -144,9 +156,14 @@ sub init
     $self->{title}   ||= 'title';
     $self->{url}     ||= 'url';
     $self->{modtime} ||= 'modtime';
+    $self->{serial_format} ||= 'yaml';    # better self-reference support
 
     unless ($self->methods)
     {
+
+        # TODO
+        croak
+          "Magic method lookup is not yet implemented. Please define your methods explicitly.";
         $self->_lookup_methods;
     }
 
@@ -175,7 +192,7 @@ sub init_indexer
 
     (my $class_meta = $self->class) =~ s/\W/\./g;
     $self->class_meta($class_meta);
-    
+
     # make urls find-able (really should adjust WordCharacters too...)
     $self->config->MaxWordLimit(256);
 
@@ -184,9 +201,10 @@ sub init_indexer
     $self->config->MetaNames(@{$self->methods});
 
     $self->config->PropertyNames(@{$self->methods});
-    $self->config->PropertyNamesNoStripChars(@{$self->methods});
+    $self->config->PropertyNamesNoStripChars(@{$self->methods});   # IMPORTANT!!
 
-    $self->config->IndexDescription('class:' . $self->class);
+    $self->config->IndexDescription(
+          join(' ', 'class:' . $self->class, 'format:' . $self->serial_format));
 
     # TODO get version
     $self->config->write2;
@@ -289,7 +307,9 @@ sub _index
 
 =head2 obj2xml( I<class>, I<object>, I<title> )
 
-Returns I<object> as an XML string.
+Returns I<object> as an XML string. obj2xml calls the serialize() method
+so if you want a serialization format other than the default, override
+serialize() in your subclass. See serialize().
 
 =cut
 
@@ -306,10 +326,7 @@ sub obj2xml
 
     for my $m (@{$self->methods})
     {
-
-        # if $m value is a scalar string, we don't want to
-        # dump() it since that'll add quotes we don't want.
-        my $v = ref $o->$m ? dump($o->$m) : $o->$m;
+        my $v = $self->serialize($o, $m);
 
         my @x =
           ($XMLer->start_tag($m), $XMLer->utf8_safe($v), $XMLer->end_tag($m));
@@ -321,6 +338,45 @@ sub obj2xml
     $self->debug and print STDOUT $xml . "\n";
 
     return $xml;
+}
+
+=head2 serialize( I<object>, I<method_name> )
+
+Returns a serialized (stringified) version of the return value of I<method_name>.
+If the return value is already a scalar string (i.e., if ref() returns false)
+then the return value is returned untouched. Otherwise, the return value is serialized
+with either JSON or YAML, depending on how you configured C<serial_format> in new().
+
+If you subclass SWISH::Prog::Object, then you can (of course) return whatever
+serialized format you prefer.
+
+=cut
+
+sub serialize
+{
+    my $self = shift;
+    my ($o, $m) = @_;
+    my $v = $o->$m;
+    unless (ref $v)
+    {
+        return $v;
+    }
+    else
+    {
+        if ($self->serial_format eq 'json')
+        {
+            return JSON::Syck::Dump($v);
+        }
+        elsif ($self->serial_format eq 'yaml')
+        {
+            return YAML::Syck::Dump($v);
+        }
+        else
+        {
+            croak "unknown serial_format: " . $self->serial_format;
+        }
+    }
+
 }
 
 =head2 obj_filter( I<object> )
