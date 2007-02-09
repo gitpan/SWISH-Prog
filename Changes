@@ -49,5 +49,8 @@ Revision history for Perl extension Prog.
         * S::Prog new() verbose now defaults to 1
 
 0.05    * S::P::Object now uses JSON or YAML to serialize values instead of Data::Dump
-          This change is sych'd with SWISH::API::Object 0.0.6
+          This change is sync'd with SWISH::API::Object 0.0.6
+
+0.06    * S::P::Object now defers to explicit 'config' passed in new().
+
 

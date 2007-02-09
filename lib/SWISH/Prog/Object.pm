@@ -18,7 +18,7 @@ use base qw( SWISH::Prog );
 __PACKAGE__->mk_accessors(
                 qw( methods class title url modtime class_meta serial_format ));
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 our $XMLer   = Search::Tools::XML->new;
 
 =pod
@@ -108,9 +108,10 @@ valid for that method() are allowed here.
 
 The B<methods> param takes an array ref of method names. Each method name
 will be called on each object in create(). Each method name will also be stored
-as a PropertyName in the Swish-e index.
+as a PropertyName in the Swish-e index, unless you explicitly pass a C<config>
+param to new() that defines your PropertyNames.
 
-If not specified, a simple Symbol table lookup will be done on I<class>
+If not specified, a simple symbol table lookup will be done on I<class>
 and all non-built-in methods will be used by default.
 
 =item class
@@ -160,10 +161,6 @@ sub init
 
     unless ($self->methods)
     {
-
-        # TODO
-        croak
-          "Magic method lookup is not yet implemented. Please define your methods explicitly.";
         $self->_lookup_methods;
     }
 
@@ -173,6 +170,10 @@ sub _lookup_methods
 {
     my $self  = shift;
     my $class = $self->class;
+
+        # TODO
+        croak
+          "Magic method lookup is not yet implemented. Please define your methods explicitly.";
 
 }
 
@@ -193,21 +194,33 @@ sub init_indexer
     (my $class_meta = $self->class) =~ s/\W/\./g;
     $self->class_meta($class_meta);
 
+    # set up some defaults unless already explicitly set
+    my $config = $self->config;
+
     # make urls find-able (really should adjust WordCharacters too...)
-    $self->config->MaxWordLimit(256);
+    $config->MaxWordLimit(256) unless $config->MaxWordLimit;
 
-    # similar to DBI, we alias top-level tag so all words are find-able via swishdefault
-    $self->config->MetaNameAlias('swishdefault ' . $class_meta);
-    $self->config->MetaNames(@{$self->methods});
+    # similar to DBI, we alias top-level tag
+    # so all words are find-able via swishdefault
+    $config->MetaNameAlias('swishdefault ' . $class_meta)
+      unless $config->MetaNameAlias;
+    $config->MetaNames(@{$self->methods}) unless @{$config->MetaNames};
 
-    $self->config->PropertyNames(@{$self->methods});
-    $self->config->PropertyNamesNoStripChars(@{$self->methods});   # IMPORTANT!!
+    $config->PropertyNames(@{$self->methods}) unless @{$config->PropertyNames};
+    
+    # IMPORTANT to do this because whitespace matters in YAML
+    # NOTE that due to swish-e cache buffering, YAML fields
+    # that are longer than 10k can get seriously messed up.
+    # this is a swish-e bug that should be fixed.
+    $config->PropertyNamesNoStripChars(@{$self->methods})
+      unless @{$config->PropertyNamesNoStripChars};    
 
-    $self->config->IndexDescription(
-          join(' ', 'class:' . $self->class, 'format:' . $self->serial_format));
+    $config->IndexDescription(
+           join(' ', 'class:' . $self->class, 'format:' . $self->serial_format))
+      unless $config->IndexDescription;
 
     # TODO get version
-    $self->config->write2;
+    $config->write2;
 
     $self->SUPER::init_indexer;
 

@@ -14,7 +14,6 @@ WriteMakefile(
         'Class::Accessor::Fast' => '0.01',
         'File::Temp'            => '0.01',
         'Data::Dump'            => '0.01',
-        'Path::Class::Iterator' => '0.04',
         'Config::General'       => '2.31',
         'YAML::Syck'            => '0.72',
 

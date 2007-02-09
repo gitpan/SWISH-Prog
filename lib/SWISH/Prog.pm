@@ -21,7 +21,7 @@ use SWISH::Prog::Index;
 
 use base qw( Class::Accessor::Fast );
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 our $ExtRE   = qr{(html|htm|xml|txt|pdf|ps|doc|ppt|xls|mp3)(\.gz)?}io;
 
 our %ParserTypes = (
