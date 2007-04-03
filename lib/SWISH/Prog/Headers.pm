@@ -32,7 +32,7 @@ our $VERSION = '0.02';
 #}
 
 our $AutoURL = $^T;
-our $Debug   = $ENV{SWISHP_DEBUG} || 0;
+our $Debug   = $ENV{SWISH3_DEBUG} || 0;
 
 our %Headers = (
     2 => {
@@ -57,7 +57,7 @@ sub head
     my $class   = shift;
     my $buf     = shift || croak "need buffer to generate headers\n";
     my $opts    = shift || {};
-    my $version = ($opts->{swishp} || $ENV{SWISHP}) ? 'P' : 2;
+    my $version = ($opts->{swish3} || $ENV{SWISH3}) ? 'P' : 2;
 
     $opts->{url} = $AutoURL++ unless exists $opts->{url};
     $opts->{modtime} ||= time();
@@ -176,27 +176,27 @@ If Swish-e is in incremental mode (which must be indicated by setting the
 increm parameter in new()), this value can be used to set the update
 mode for the document.
 
-=item swishp
+=item swish3
 
-Set to TRUE to use SWISH::Parser header labels (including Content-Type).
+Set to TRUE to use SWISH::3::Parser header labels (including Content-Type).
 
 =back
 
-B<NOTE:> The special environment variable C<SWISHP> is checked in order to 
+B<NOTE:> The special environment variable C<SWISH3> is checked in order to 
 determine the correct header labels. If you are using SWISH::Parser,
-you must set that environment variable, or pass the C<swishp> option.
+you must set that environment variable, or pass the C<swish3> option.
 
 =head1 Headers API
 
 See the Swish-e documentation at L<http://swish-e.org/>.
 
-For SWISH::Parser Headers API (which is slightly different) see
-L<http://swishparser.peknet.com/>.
+For SWISH::3::Parser Headers API (which is slightly different) see
+L<http://dev.swish-e.org/wiki/swish3/>.
  
 =head1 SEE ALSO
 
 SWISH::Prog,
-SWISH::Parser
+SWISH::3
 
 
 =head1 AUTHOR

@@ -18,7 +18,7 @@ use base qw( SWISH::Prog );
 __PACKAGE__->mk_accessors(
                 qw( methods class title url modtime class_meta serial_format ));
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 our $XMLer   = Search::Tools::XML->new;
 
 =pod
@@ -231,11 +231,11 @@ sub init_indexer
 Index your objects.
 
 I<data> should either be an array ref of objects, or an iterator object with
-two methods: C<done> and C<next>. If I<data> is an iterator, it will be used like:
+a C<next> method. If I<data> is an iterator, it will be used like:
 
- until($data->done)
+ while( my $object = $data->next )
  {
-     $indexer->deal_with( $data->next );
+     $indexer->method_to_index( $object );
  }
  
 Returns number of objects indexed.
@@ -259,11 +259,11 @@ sub create
         }
 
     }
-    elsif (ref($data) && $data->can('done') && $data->can('next'))
+    elsif (ref($data) && $data->can('next'))
     {
-        until ($data->done)
+        while(my $o = $data->next)
         {
-            $self->_index($data->next);
+            $self->_index($o);
             $counter++;
         }
     }
