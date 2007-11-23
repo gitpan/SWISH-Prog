@@ -13,7 +13,7 @@ use overload('""'     => \&as_string,
 
 use SWISH::Prog::Headers;
 
-our $VERSION = '0.04';
+our $VERSION = '0.08';
 
 my @Attr = qw( url modtime type parser content update debug size charset );
 __PACKAGE__->mk_accessors(@Attr);

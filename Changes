@@ -55,4 +55,9 @@ Revision history for Perl extension Prog.
 
 0.07    * S::P::Object iterator now uses more idiomatic while/next algorithm.
 
+0.08    22 Nov 2007
+        * added S::P::Mail class and example swishmail.pl script
+        * sync all $VERSION vars to same value
+        * allow for non-standard docclass names
+
 

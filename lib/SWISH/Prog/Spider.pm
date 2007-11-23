@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use Data::Dump qw/dump/;
 
-our $VERSION = '0.01';
+our $VERSION = '0.08';
 
 1;
 __END__

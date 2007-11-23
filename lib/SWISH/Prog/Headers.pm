@@ -7,7 +7,7 @@ use Carp;
 
 use bytes;
 
-our $VERSION = '0.02';
+our $VERSION = '0.08';
 
 # NOTE this does not work.
 # instead we require perl > 5.8 and just use bytes straight up.

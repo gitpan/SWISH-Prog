@@ -1,19 +1,19 @@
-package SWISH::Prog::DBI::Doc;
+package SWISH::Prog::Mail::Doc;
+use strict;
+use warnings;
 use base qw( SWISH::Prog::Doc );
 
-use Carp;
-
 our $VERSION = '0.08';
-
 
 =pod
 
 =head1 NAME
 
-SWISH::Prog::DBI::Doc - index DB records with Swish-e
+SWISH::Prog::DBI::Mail - index email with Swish-e
 
 =head1 SYNOPSIS
 
+ # see SWISH::Prog::Doc
     
 =head1 DESCRIPTION
 
@@ -25,23 +25,15 @@ here.
 
 =head2 init
 
-Creates row() accessor.
+Creates mail() accessor.
 
-=head2 row
+=head2 mail
 
-Get/set row hash ref fetched from db. Useful for creating *_filter methods.
-
-B<NOTE:> This row() method is not to be confused with the SWISH::Prog::DBI row_filter()
-method.
+Get/set hash ref representing a mail message. Useful for creating *_filter methods.
 
 =cut
 
-
-sub init
-{
-    my $self = shift;
-    $self->mk_accessors('row');   
-}
+__PACKAGE__->mk_accessors('mail');
 
 
 1;
@@ -55,18 +47,16 @@ __END__
 L<http://swish-e.org/docs/>
 
 SWISH::Prog,
-SWISH::Prog::DBI
+SWISH::Prog::Mail
 
 
 =head1 AUTHOR
 
 Peter Karman, E<lt>perl@peknet.comE<gt>
 
-Thanks to Atomic Learning for supporting the development of this module.
-
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2006 by Peter Karman
+Copyright 2007 by Peter Karman
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

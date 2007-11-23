@@ -13,7 +13,7 @@ use base qw( SWISH::Prog );
 
 __PACKAGE__->mk_accessors(qw/ table_meta db title alias_columns /);
 
-our $VERSION = '0.03';
+our $VERSION = '0.08';
 our $XMLer   = Search::Tools::XML->new;
 
 =pod

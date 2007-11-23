@@ -7,7 +7,7 @@ use Carp;
 use Data::Dump qw( pp );
 use File::Find;
 
-our $VERSION = '0.02';
+our $VERSION = '0.08';
 
 #
 # the basic wanted() code here based on Bill Moseley's DirTree.pl,

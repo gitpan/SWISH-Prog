@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Carp;
-use Data::Dump qw( dump );
 
 # both these next modules are provided if you install YAML::Syck
 use YAML::Syck ();
@@ -18,7 +17,7 @@ use base qw( SWISH::Prog );
 __PACKAGE__->mk_accessors(
                 qw( methods class title url modtime class_meta serial_format ));
 
-our $VERSION = '0.05';
+our $VERSION = '0.08';
 our $XMLer   = Search::Tools::XML->new;
 
 =pod
@@ -454,12 +453,11 @@ __END__
 
 =head1 REQUIREMENTS
 
-L<SWISH::Prog>, L<Data::Dump>
+L<SWISH::Prog>, L<YAML::Syck>, L<JSON::Syck>
 
 =head1 LIMITATIONS and BUGS
 
-L<SWISH::Prog::Object> cannot index method values that are not scalars,
-array refs or hash refs, due to how reference values stringify with Data::Dump.
+None known. Please point some out.
 
 =head1 SEE ALSO
 

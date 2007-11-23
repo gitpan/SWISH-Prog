@@ -11,7 +11,7 @@ use SWISH::Prog::Config;
 use base qw( Exporter Class::Accessor::Fast );
 our @EXPORT = qw( go );
 
-our $VERSION = '0.03';
+our $VERSION = '0.08';
 
 __PACKAGE__->mk_accessors(
     qw(

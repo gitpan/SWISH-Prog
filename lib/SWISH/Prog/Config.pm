@@ -64,7 +64,7 @@ use Path::Class qw();    # we have our own file() method
 use overload('""'     => \&stringify,
              fallback => 1,);
 
-our $VERSION = '0.02';
+our $VERSION = '0.08';
 
 our $XMLer = Search::Tools::XML->new;
 

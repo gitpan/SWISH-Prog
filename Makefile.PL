@@ -5,17 +5,18 @@ WriteMakefile(
     VERSION_FROM => 'lib/SWISH/Prog.pm',    # finds $VERSION
     PREREQ_PM    => {
 
-        'Search::Tools'         => '0.01',
+        'Search::Tools'         => '0.16', # important version
         'File::Basename'        => '0.01',
-        'IO::All'               => '0.01',
         'MIME::Types'           => '0.01',
         'File::Copy'            => '0.01',
+        'File::Slurp'           => 0,
         'SWISH::Filter'         => '0.07',
         'Class::Accessor::Fast' => '0.01',
         'File::Temp'            => '0.01',
         'Data::Dump'            => '0.01',
         'Config::General'       => '2.31',
         'YAML::Syck'            => '0.72',
+        #'Mail::Box'             => 0,  # do not require it. only used by ::Mail
 
     },    # e.g., Module::Name => 1.1
     (

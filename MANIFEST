@@ -12,6 +12,9 @@ lib/SWISH/Prog/Find.pm
 lib/SWISH/Prog/Spider.pm
 lib/SWISH/Prog/Object.pm
 lib/SWISH/Prog/Object/Doc.pm
+lib/SWISH/Prog/Mail.pm
+lib/SWISH/Prog/Mail/Doc.pm
+examples/swishmail.pl
 README
 t/1.t
 t/2.t

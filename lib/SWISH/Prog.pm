@@ -21,7 +21,7 @@ use SWISH::Prog::Index;
 
 use base qw( Class::Accessor::Fast );
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 our $ExtRE   = qr{(html|htm|xml|txt|pdf|ps|doc|ppt|xls|mp3)(\.gz)?}io;
 
 our %ParserTypes = (
@@ -45,7 +45,7 @@ our @IndexMeth = qw/ name verbose opts warnings exe debug config /;
 
 =head1 NAME
 
-SWISH::Prog - build Swish-e programs
+SWISH::Prog - Swish-e document aggregation
 
 =head1 SYNOPSIS
 
@@ -86,7 +86,7 @@ SWISH::Prog - build Swish-e programs
 
 =head1 DESCRIPTION
 
-SWISH::Prog is a framework for indexing document collections with Swish-e.
+SWISH::Prog is a framework for aggregating and indexing document collections with Swish-e.
 This module is a collection of utility methods for writing your own applications.
 
 B<The API is a work in progress and subject to change.>
@@ -162,42 +162,32 @@ See init() and init_indexer() instead.
 
 =cut
 
-sub new
-{
+sub new {
     my $class = shift;
     my $self  = {};
-    bless($self, $class);
-    $self->_init($class, @_);
+    bless( $self, $class );
+    $self->_init( $class, @_ );
     $self->init();
     $self->_init_indexer();
     return $self;
 }
 
 # don't override this! use init() or init_indexer() instead.
-sub _init
-{
+sub _init {
     my $self  = shift;
     my $class = shift;
-
-    # make sure we have a Doc class available
-    my $docclass = join('::', $class, 'Doc');
-    unless ($docclass->can('new'))
-    {
-        croak "Doc subclass $docclass required for $class";
-    }
-    $self->{docclass} = $docclass;
 
     # make methods in $class's namespace
     $class->mk_accessors(
         qw(
-          file_typer
-          swish_filter
-          fh
-          ua
-          debug
-          strict
-          indexer
-          ),
+            file_typer
+            swish_filter
+            fh
+            ua
+            debug
+            strict
+            indexer
+            ),
 
         @IndexMeth
     );
@@ -205,11 +195,17 @@ sub _init
 
     # init params
     $self->{'_start'} = time;
-    if (@_)
-    {
+    if (@_) {
         my %extra = @_;
-        @$self{keys %extra} = values %extra;
+        @$self{ keys %extra } = values %extra;
     }
+
+    # make sure we have a Doc class available
+    my $docclass = $self->{docclass} || join( '::', $class, 'Doc' );
+    unless ( $docclass->can('new') ) {
+        croak "Doc subclass $docclass required for $class -- did you 'use' it?";
+    }
+    $self->{docclass} ||= $docclass;
 
     $self->{verbose} = 1 unless defined $self->{verbose};
 
@@ -225,41 +221,39 @@ sub _init
     $self->{ua} ||= LWP::UserAgent->new;
 
     # new config unless defined
-    $self->{config} ||= SWISH::Prog::Config->new(debug => $self->debug);
+    $self->{config} ||= SWISH::Prog::Config->new( debug => $self->debug );
 
     # make sure we've got an object in config()
-    unless (ref $self->{config} && $self->{config}->isa('SWISH::Prog::Config'))
+    unless ( ref $self->{config}
+        && $self->{config}->isa('SWISH::Prog::Config') )
     {
         my $f = $self->{config};
-        unless (-r $f)
-        {
+        unless ( -r $f ) {
             croak "config file $f is not read-able: $!";
         }
-        $self->{config} = SWISH::Prog::Config->new(debug => $self->debug);
+        $self->{config} = SWISH::Prog::Config->new( debug => $self->debug );
 
         # TODO test for ver2 vs. ver3 style
         $self->{config}->read2($f);
     }
 
     # make sure debug flag inherits
-    $self->config->debug($self->debug) unless defined($self->config->debug);
+    $self->config->debug( $self->debug )
+        unless defined( $self->config->debug );
 
 }
 
-sub _init_indexer
-{
+sub _init_indexer {
 
     # open pipe to swish-e -S prog
     # and set filehandle accordlingly
     my $self = shift;
 
-    unless (exists $self->{fh})
-    {
+    unless ( exists $self->{fh} ) {
         $self->init_indexer;
     }
-    else
-    {
-        $self->indexer(SWISH::Prog::Index->new($self));
+    else {
+        $self->indexer( SWISH::Prog::Index->new($self) );
     }
 
     # if fh = 0 or undef, default to stdout
@@ -300,8 +294,7 @@ before the C<swish-e> index is opened.
 
 =cut
 
-sub init
-{
+sub init {
     my $self = shift;
 
     1;
@@ -316,11 +309,10 @@ options to the S::P::Index new() method.
 
 =cut
 
-sub init_indexer
-{
+sub init_indexer {
     my $self = shift;
-    $self->indexer(SWISH::Prog::Index->new($self)->run);
-    $self->fh($self->indexer->fh);
+    $self->indexer( SWISH::Prog::Index->new($self)->run );
+    $self->fh( $self->indexer->fh );
 }
 
 =head2 DESTROY
@@ -334,13 +326,11 @@ as well. See SWISH::Prog::DBI for an example.
 
 =cut
 
-sub DESTROY
-{
+sub DESTROY {
     my $self = shift;
-    if ($self->{fh})
-    {
-        close($self->{fh})
-          or croak "can't close filehandle $self->{fh}: $!\n";
+    if ( $self->{fh} ) {
+        close( $self->{fh} )
+            or croak "can't close filehandle $self->{fh}: $!\n";
     }
 }
 
@@ -407,8 +397,7 @@ for how to subclass SWISH::Prog::Doc.
 
 my %ext_to_mime = ();    # cache to avoid hitting MIME::Type each time
 
-sub fetch
-{
+sub fetch {
     my $self = shift;
     my $url  = shift;
     my $stat = shift;
@@ -416,105 +405,92 @@ sub fetch
 
     my %doc = ();
 
-    if ($self->remote($url))
-    {
+    if ( $self->remote($url) ) {
 
         my $response = $self->{ua}->get($url);
 
-        if ($response->is_success)
-        {
+        if ( $response->is_success ) {
             %doc = (
-                    url     => $url,
-                    modtime => $response->last_modified,
-                    type    => $response->content_type,
-                    content => $response->content,
-                    size    => $response->content_length
-                   );
+                url     => $url,
+                modtime => $response->last_modified,
+                type    => $response->content_type,
+                content => $response->content,
+                size    => $response->content_length
+            );
 
         }
-        else
-        {
+        else {
             croak $response->status_line;    # can catch with eval()
         }
 
-        if ($self->strict)
-        {
+        if ( $self->strict ) {
             my $mime = $self->file_typer->mimeTypeOf($url);
-            if ($mime ne $doc{type})
-            {
+            if ( $mime ne $doc{type} ) {
                 carp "Warning: http header says Content-type=$doc{type} "
-                  . "but content looks like $mime. "
-                  . "We're using $mime";
+                    . "but content looks like $mime. "
+                    . "We're using $mime";
 
                 $doc{type} = $mime;
             }
         }
 
     }
-    else
-    {
+    else {
         my $buf;
-        
+
         # the parser->slurp is about 30% faster.
-        if ($self->can('parser') and $self->parser->isa('SWISH::Parser'))
-        {
+        if ( $self->can('parser') and $self->parser->isa('SWISH::Parser') ) {
             eval { $buf = $self->parser->slurp_file($url) };
         }
-        else
-        {
-            eval { $buf = read_file($url, binmode => ':raw') };
+        else {
+            eval { $buf = read_file( $url, binmode => ':raw' ) };
         }
-        if ($@)
-        {
+        if ($@) {
             carp "unable to read $url - skipping";
             return;
         }
 
-        $stat ||= [stat($url)];
+        $stat ||= [ stat($url) ];
 
         # cache the mime type as a string
         # to avoid the MIME::Type::type() stringification
         my $type;
-        if ($ext)
-        {
+        if ($ext) {
             $ext_to_mime{$ext} ||= $self->file_typer->mimeTypeOf($url) . "";
             $type = $ext_to_mime{$ext};
         }
-        else
-        {
+        else {
             $type = $self->file_typer->mimeTypeOf($url) . "";
         }
 
         %doc = (
-                url     => $url,
-                modtime => $stat->[9],
-                content => $buf,
-                type    => $type,
-                size    => $stat->[7],
-                debug   => $self->debug
-               );
+            url     => $url,
+            modtime => $stat->[9],
+            content => $buf,
+            type    => $type,
+            size    => $stat->[7],
+            debug   => $self->debug
+        );
     }
 
-    $doc{parser} = $ParserTypes{$doc{type}} || $ParserTypes{default};
+    $doc{parser} = $ParserTypes{ $doc{type} } || $ParserTypes{default};
 
-    if ($self->swish_filter->can_filter($doc{type}))
-    {
-        my $f =
-          $self->swish_filter->convert(
-                                       document     => \$doc{content},
-                                       content_type => $doc{type},
-                                       name         => $doc{url}
-                                      );
+    if ( $self->swish_filter->can_filter( $doc{type} ) ) {
+        my $f = $self->swish_filter->convert(
+            document     => \$doc{content},
+            content_type => $doc{type},
+            name         => $doc{url}
+        );
 
         if (   !$f
             || !$f->was_filtered
-            || $f->is_binary)    # is is_binary necessary?
+            || $f->is_binary )    # is is_binary necessary?
         {
-            carp "skipping $doc{url} - filtering error";
+            warn "skipping $doc{url} - filtering error\n";
             return;
         }
 
-        $doc{content} = ${$f->fetch_doc};
+        $doc{content} = ${ $f->fetch_doc };
 
         # leave type and parser as-is
         # since we want to store original mime in indexer
@@ -535,8 +511,7 @@ Use SWISH::Prog::Find to traverse @I<paths>.
 
 =cut
 
-sub find
-{
+sub find {
     require SWISH::Prog::Find;
     SWISH::Prog::Find::files(@_);
 }
@@ -555,10 +530,9 @@ is a prime candidate for overriding in your subclass.
 
 =cut
 
-sub ok
-{
+sub ok {
     my $self = shift;
-    my $doc  = shift or croak "need Doc object";
+    my $doc = shift or croak "need Doc object";
 
     return $self->content_ok($doc);
 }
@@ -575,12 +549,11 @@ The default test is simply that length() > 0.
 
 =cut
 
-sub content_ok
-{
+sub content_ok {
     my $self = shift;
-    my $doc  = shift or croak "need Doc object";
+    my $doc = shift or croak "need Doc object";
 
-    return length($doc->content);
+    return length( $doc->content );
 }
 
 =head2 url_ok( I<URL> )
@@ -593,8 +566,7 @@ Returns file extension of I<URL> if I<URL> should be processed.
 
 =cut
 
-sub url_ok
-{
+sub url_ok {
 
     # TODO read from $self->config to determine opts to check
     my $self = shift;
@@ -603,21 +575,19 @@ sub url_ok
 
     $self->debug and print "checking file $url\n";
 
-    my ($file, $path, $ext);
+    my ( $file, $path, $ext );
 
-    if ($self->remote($url))
-    {
+    if ( $self->remote($url) ) {
 
     }
-    else
-    {
+    else {
 
         # TODO build regex from ->config
-        ($file, $path, $ext) = fileparse($url, $ExtRE);
+        ( $file, $path, $ext ) = fileparse( $url, $ExtRE );
 
         #carp "parsed file: $file\npath: $path\next: $ext";
 
-        $stat ||= [stat($url)];
+        $stat ||= [ stat($url) ];
         return 0 unless -r _;
         return 0 if -d _;
         return 0 if $file =~ m/^\./;
@@ -640,11 +610,10 @@ the recursion into I<directory> via the config() params
  
 =cut
 
-sub dir_ok
-{
+sub dir_ok {
     my $self = shift;
     my $dir  = shift;
-    my $stat = shift || [stat($dir)];
+    my $stat = shift || [ stat($dir) ];
     return 0 unless -d _;
     return 0 if $dir =~ m!/\.!;
     return 0 if $dir =~ m/^\./;
@@ -660,13 +629,11 @@ Runs filter() and ok(), in that order, before handing to the indexer.
  
 =cut
 
-sub index
-{
+sub index {
     my $self = shift;
-    my $doc  = shift or croak "need Doc object";
+    my $doc = shift or croak "need Doc object";
 
-    unless ($doc->isa('SWISH::Prog::Doc'))
-    {
+    unless ( $doc->isa('SWISH::Prog::Doc') ) {
         croak "$doc is not a SWISH::Prog::Doc object";
     }
 
@@ -677,8 +644,8 @@ sub index
 
     carp pp($doc) if $self->debug;
 
-    print {$self->fh} $doc
-      or croak "failed to print to filehandle " . $self->fh . ": $!\n";
+    print { $self->fh } $doc
+        or croak "failed to print to filehandle " . $self->fh . ": $!\n";
 
     $self->{counter}++;
 
@@ -697,10 +664,9 @@ method is called later, just before indexing starts.
 
 =cut
 
-sub filter
-{
+sub filter {
     my $self = shift;
-    my $doc  = shift or croak "need Doc object";
+    my $doc = shift or croak "need Doc object";
 
     1;
 }
@@ -711,8 +677,7 @@ Returns the elapsed time in seconds since object was created.
 
 =cut
 
-sub elapsed
-{
+sub elapsed {
     return time() - shift->{_start};
 }
 

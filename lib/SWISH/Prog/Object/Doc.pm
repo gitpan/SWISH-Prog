@@ -3,7 +3,7 @@ use base qw( SWISH::Prog::Doc );
 
 use Carp;
 
-our $VERSION = '0.01';
+our $VERSION = '0.08';
 
 
 =pod
