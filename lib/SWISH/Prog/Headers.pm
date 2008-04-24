@@ -1,96 +1,77 @@
 package SWISH::Prog::Headers;
 
-use 5.8.0;
+use 5.008_003;
 use strict;
 use warnings;
+use base qw( SWISH::Prog::Class );
 use Carp;
+__PACKAGE__->mk_accessors(qw( version ));
+use bytes;    # so length() measures bytes
 
-use bytes;
-
-our $VERSION = '0.08';
-
-# NOTE this does not work.
-# instead we require perl > 5.8 and just use bytes straight up.
-# see http://www.perlmonks.org/?node=405917
-#BEGIN
-#{
-#
-#    # this hack allows us to "use bytes" or fake it for older (pre-5.6.1)
-#    # versions of Perl (thanks to Liz from PerlMonks):
-#    eval { use bytes };    # treat buffer length as bytes not characters
-#
-#    if ($@)
-#    {
-#        warn "could not load bytes pragma\n";
-#
-#        # couldn't find it, but pretend we did anyway:
-#        $INC{'bytes.pm'} = 1;
-#
-#        # 5.005_03 doesn't inherit UNIVERSAL::unimport:
-#        eval "sub bytes::unimport { return 1 }";
-#    }
-#}
-
-our $AutoURL = $^T;
-our $Debug   = $ENV{SWISH3_DEBUG} || 0;
-
+our $VERSION = '0.20';
+our $AutoURL = time();
 our %Headers = (
     2 => {
-          url     => 'Path-Name',
-          modtime => 'Last-Mtime',
-          parser  => 'Document-Type',
-          update  => 'Update-Mode',
-         },
-    P => {
-          url     => 'Content-Location',
-          modtime => 'Last-Modified',      # but in epoch seconds
-          parser  => 'Parser-Type',
-          type    => 'Content-Type',
-          update  => 'Update-Mode',
-          mime    => 'Content-Type',
-         }
+        url     => 'Path-Name',
+        modtime => 'Last-Mtime',
+        parser  => 'Document-Type',
+        action  => 'Update-Mode',
+    },
+    3 => {
+        url     => 'Content-Location',
+        modtime => 'Last-Modified',      # but in epoch seconds
+        parser  => 'Parser-Type',
+        type    => 'Content-Type',
+        action  => 'Action',
+        mime    => 'Content-Type',
+        }
 
 );
 
-sub head
-{
-    my $class   = shift;
-    my $buf     = shift || croak "need buffer to generate headers\n";
-    my $opts    = shift || {};
-    my $version = ($opts->{swish3} || $ENV{SWISH3}) ? 'P' : 2;
+sub init {
+    my $self = shift;
+    $self->{version} ||= 2;
+}
+
+sub head {
+    my $self = shift;
+    my $buf  = shift;
+    $buf = '' unless defined $buf;
+    my $opts = shift || {};
+
+    my $version = delete( $opts->{version} ) || $self->version || '2';
 
     $opts->{url} = $AutoURL++ unless exists $opts->{url};
     $opts->{modtime} ||= time();
 
     my $size = length($buf);    #length in bytes, not chars
 
-    #    if ($Debug > 2)
-    #    {
-    #        carp "length = $size";
-    #        {
-    #            no bytes;
-    #            carp "num chars = " . length($buf);
-    #            if ($Debug > 20)
-    #            {
-    #                my $c = 0;
-    #                for (split(//, $buf))
-    #                {
-    #                    carp ++$c . "  $_   = " . ord($_);
-    #                }
-    #            }
-    #        }
-    #    }
+    if ( $self->debug > 2 ) {
+        warn "length = $size\n";
+        {
+            no bytes;
+            warn "num chars = " . length($buf) . "\n";
+            if ( $self->debug > 20 ) {
+                my $c = 0;
+                for ( split( //, $buf ) ) {
+                    warn ++$c . "  $_   = " . ord($_) . "\n";
+                }
+            }
+        }
+    }
 
     my @h = ("Content-Length: $size");
 
-    for my $k (sort keys %$opts)
-    {
+    for my $k ( sort keys %$opts ) {
         next unless defined $opts->{$k};
         my $label = $Headers{$version}->{$k} or next;
-        push(@h, "$label: $opts->{$k}");
+
+        # TODO map action to version 2 values
+
+        push( @h, "$label: $opts->{$k}" );
     }
 
-    return join("\n", @h) . "\n\n";    # extra \n required
+    return join( "\n", @h ) . "\n\n";    # extra \n required
 }
 
 1;
@@ -109,8 +90,8 @@ SWISH::Prog::Headers - create document headers for Swish-e -S prog
   use File::Slurp;
   my $f = 'some/file.html';
   my $buf = read_file( $f ):
-  
-  print SWISH::Prog::Headers->head( $buf, { url=>$f } ), $buf;
+  my $headers = SWISH::Prog::Headers->new;
+  print $headers->head( $buf, { url=>$f } ), $buf;
 
 =head1 DESCRIPTION
 
@@ -132,7 +113,17 @@ Set to TRUE to carp verbage about content length, etc.
 
 =head1 METHODS
 
-There is one class method available.
+=head2 new
+
+Returns a new object.
+
+=head2 init
+
+Called by new().
+
+=head2 version
+
+Get/set the API version. Default is C<2>.
 
 =head2 head( I<buf> [, \%I<opts> ] )
 
@@ -146,6 +137,11 @@ supplied, they will be guessed at based on the contents
 of I<buf>.
 
 =over
+
+=item version
+
+Which version of the headers to use. The possible values are
+C<2> for Swish-e version 2.x or C<3> for Swish3.
 
 =item url
 
@@ -170,21 +166,43 @@ The MIME type of the document. If not supplied, it will be guessed at based
 on the file extension of the URL (if supplied) or $DefMime. B<NOTE>: MIME type
 is only used in SWISH::Parser headers.
 
+=item action
+
+Should the doc be added to, updated in or deleted from the index. 
+The url value is used as the unique identifier of the document in the index.
+The possible values are:
+
+=over
+
+=item add (default)
+
+If a document with the same url value already
+exists, a fatal error is thrown. 
+
 =item update
 
-If Swish-e is in incremental mode (which must be indicated by setting the
-increm parameter in new()), this value can be used to set the update
-mode for the document.
+If a document with the same url does not already exist in the index,
+a fatal error is thrown.
 
-=item swish3
+=item add_or_update
 
-Set to TRUE to use SWISH::3::Parser header labels (including Content-Type).
+Check first if url exists in the index, and then add or update as appropriate.
+Since this requires additional processing overhead for every document,
+it is not the default. It is, however, the safest action to take.
+
+=item delete
+
+Remove the document from the index. If url does not exist, a fatal error
+is thrown.
+
+=back
 
 =back
 
 B<NOTE:> The special environment variable C<SWISH3> is checked in order to 
 determine the correct header labels. If you are using SWISH::Parser,
-you must set that environment variable, or pass the C<swish3> option.
+you must set that environment variable, or indicate the version with
+the C<version> option.
 
 =head1 Headers API
 
@@ -195,8 +213,7 @@ L<http://dev.swish-e.org/wiki/swish3/>.
  
 =head1 SEE ALSO
 
-SWISH::Prog,
-SWISH::3
+SWISH::Prog, SWISH::3
 
 
 =head1 AUTHOR
@@ -205,7 +222,7 @@ Peter Karman, E<lt>perl@peknet.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2006 by Peter Karman
+Copyright 2008 by Peter Karman
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

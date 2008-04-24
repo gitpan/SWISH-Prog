@@ -3,49 +3,49 @@ package SWISH::Prog::Doc;
 use strict;
 use warnings;
 use Carp;
-use base qw( Class::Accessor::Fast );
+use base qw( SWISH::Prog::Class );
 
 use POSIX qw(locale_h);
 use locale;
 
-use overload('""'     => \&as_string,
-             fallback => 1,);
+use overload(
+    '""'     => \&as_string,
+    fallback => 1,
+);
 
 use SWISH::Prog::Headers;
 
-our $VERSION = '0.08';
+our $VERSION = '0.20';
 
-my @Attr = qw( url modtime type parser content update debug size charset );
+my @Attr = qw( url modtime type parser content action size charset data );
 __PACKAGE__->mk_accessors(@Attr);
 my $locale = setlocale(LC_CTYPE);
-my ($lang, $charset) = split(m/\./, $locale);
+my ( $lang, $charset ) = split( m/\./, $locale );
 $charset ||= 'iso-8859-1';
 
 =pod
 
 =head1 NAME
 
-SWISH::Prog::Doc - Document object for passing to Swish-e indexer
+SWISH::Prog::Doc - Document object class for passing to SWISH::Prog::Indexer
 
 =head1 SYNOPSIS
 
   # subclass SWISH::Prog::Doc
-  # and create _filter() methods
+  # and override filter() method
   
-  package My::Prog::Doc
+  package MyDoc;
   use base qw( SWISH::Prog::Doc );
   
-  sub url_filter
-  {
+  sub filter {
     my $doc = shift;
+    
+    # alter url
     my $url = $doc->url;
     $url =~ s/my.foo.com/my.bar.org/;
     $doc->url( $url );
-  }
-  
-  sub content_filter
-  {
-    my $doc = shift;
+    
+    # alter content
     my $buf = $doc->content;
     $buf =~ s/foo/bar/gi;
     $doc->content( $buf );
@@ -56,39 +56,16 @@ SWISH::Prog::Doc - Document object for passing to Swish-e indexer
 =head1 DESCRIPTION
 
 SWISH::Prog::Doc is the base class for Doc objects in the SWISH::Prog
-framework. Doc objects are created and returned 
-by the SWISH::Prog->fetch() method.
+framework. Doc objects are created by SWISH::Prog::Aggregator classes
+and processed by SWISH::Prog::Indexer classes.
 
-You can subclass SWISH::Prog::Doc and add _filter() methods to alter
-the values of the Doc object before it is returned from fetch().
-
-If you subclass SWISH::Prog, you B<MUST> subclass SWISH::Prog::Doc as well,
-even if only as a placeholder.
-
-Example:
-
- package MyApp::Prog;
- use base qw( SWISH::Prog );
- 
- sub ok
- {
-   my $self = shift;
-   my $doc = shift;
-   
-   1;   # everything is permitted (but not all things are profitable...)
- }
- 
- 1;
- 
- package MyApp::Prog::Doc;  # must use same base class name as above
- 
- 1;
-
+You can subclass SWISH::Prog::Doc and add a filter() method to alter
+the values of the Doc object before it is indexed.
 
 =head1 METHODS
 
 All of the following methods may be overridden when subclassing
-this module.
+this module, but the recommendation is to override only filter().
 
 =head2 new
 
@@ -110,9 +87,7 @@ All of the following params are also available as accessors/mutators.
 
 =item size
 
-=item update
-
-** Swish-e verison 2.x only **
+=item action
 
 =item debug
 
@@ -122,63 +97,31 @@ All of the following params are also available as accessors/mutators.
 
 =cut
 
-sub new
-{
-    my $class = shift;
-    my $self  = {};
-    bless($self, $class);
-    $self->_init(@_);
-    $self->init();
-    $self->filters();
+=head2 init
+
+Calls filter() on object.
+
+=cut
+
+sub init {
+    my $self = shift;
+    $self->{charset} ||= $charset;
+    $self->filter();
     return $self;
 }
 
-sub _init
-{
-    my $self = shift;
-    $self->{'_start'} = time;
-    if (@_)
-    {
-        my %extra = @_;
-        @$self{keys %extra} = values %extra;
-    }
+=head2 filter
 
-    $self->{debug} ||= $ENV{PERL_DEBUG} || 0;
-    $self->{charset} ||= $charset;
-}
+Override this method to alter the values in the object prior to it
+being process()ed by the Indexer.
 
-=head2 filters
+The default is to do nothing.
 
-Calls any defined *_filter() methods. Called by new() after init().
+This method can also be set using the filter() callback in SWISH::Prog->new().
 
 =cut
 
-sub filters
-{
-    my $self = shift;
-
-    # call *_filter for each attribute
-    for (@Attr)
-    {
-        my $f = $_ . '_filter';
-        if ($self->can($f))
-        {
-            $self->$f;
-        }
-    }
-
-}
-
-=pod
-
-=head2 init
-
-Public initialization method. Override this method in order to initialize a Doc
-object. Called in new() after private initialization and before filters().
-
-=cut
-
-sub init { }
+sub filter { }
 
 =head2 as_string
 
@@ -193,37 +136,24 @@ Example:
 
 =cut
 
-sub as_string
-{
+# TODO cache this higher up? how else to set debug??
+my $headers = SWISH::Prog::Headers->new();
+
+sub as_string {
     my $self = shift;
 
     # we ignore size() and let Headers compute it based on actual content()
-    return
-      SWISH::Prog::Headers->head(
-                                 $self->content,
-                                 {
-                                  url     => $self->url,
-                                  modtime => $self->modtime,
-                                  type    => $self->type,
-                                  update  => $self->update,
-                                  parser  => $self->parser
-                                 }
-                                )
-      . $self->content;
+    return $headers->head(
+        $self->content,
+        {   url     => $self->url,
+            modtime => $self->modtime,
+            type    => $self->type,
+            action  => $self->action,
+            parser  => $self->parser
+        }
+    ) . $self->content;
 
 }
-
-=head1 FILTERS
-
-Every object attribute may have a *_filter() method defined for it as well.
-As part of the object initialization in new(), each attribute is tested with can()
-to see if a corresponding _filter() method exists, and if so, the object is passed.
-See the SYNOPIS for examples.
-
-Filter method return values are ignored. Save whatever changes you want directly
-in the passed object.
-
-=cut
 
 1;
 
@@ -239,18 +169,13 @@ L<http://swish-e.org/docs/>
 
 SWISH::Prog::Headers
 
-
 =head1 AUTHOR
 
 Peter Karman, E<lt>perl@peknet.comE<gt>
 
-Thanks to www.atomiclearning.com for sponsoring the development
-of this module.
-
-
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2006 by Peter Karman
+Copyright 2008 by Peter Karman
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

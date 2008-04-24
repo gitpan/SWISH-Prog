@@ -21,24 +21,18 @@ DEPENDENCIES
 This module requires these other modules and libraries:
 
   Search::Tools
-  IO:All
   SWISH::Filter
   Class::Accessor::Fast
   File::Temp
-  File::Copy
   File::Basename
   MIME::Types
   Data::Dump
-  LWP::UserAgent
   Path::Class
-  Path::Class::Iterator
   Config::General
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2006 Peter Karman
-
-Thanks to Atomic Learning, Inc for supporting some of the development of this module.
+Copyright 2008 Peter Karman <karman at cpan dot org>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

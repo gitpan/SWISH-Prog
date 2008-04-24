@@ -39,6 +39,8 @@ Example:
 
 =head1 METHODS
 
+NOTE this class inherits from Class::Accessor and not SWISH::Prog::Class.
+
 =head2 new( I<params> )
 
 Instatiate a new Config object. Takes a hash of key/value pairs, where each key
@@ -55,213 +57,198 @@ Example:
 use strict;
 use warnings;
 use Carp;
-use Config::General;
 use File::Slurp;
+use Config::General;
 use Data::Dump qw( dump );
 use File::Temp qw( tempfile );
 use Search::Tools::XML;
 use Path::Class qw();    # we have our own file() method
-use overload('""'     => \&stringify,
-             fallback => 1,);
+use overload(
+    '""'     => \&stringify,
+    fallback => 1,
+);
 
-our $VERSION = '0.08';
+our $VERSION = '0.20';
 
 our $XMLer = Search::Tools::XML->new;
 
+# can't use SWISH::Prog::Class because we override the get/set magic.
 use base qw( Class::Accessor );
 
 my %unique = map { $_ => 1 } qw(
-  MetaNames
-  PropertyNames
-  PropertyNamesNoStripChars
+    MetaNames
+    PropertyNames
+    PropertyNamesNoStripChars
 
-  );
+);
 
-my @Opts = qw/
+my @Opts = qw(
+    AbsoluteLinks
+    BeginCharacters
+    BumpPositionCounterCharacters
+    Buzzwords
+    ConvertHTMLEntities
+    DefaultContents
+    Delay
+    DontBumpPositionOnEndTags
+    DontBumpPositionOnStartTags
+    EnableAltSearchSyntax
+    EndCharacters
+    EquivalentServer
+    ExtractPath
+    FileFilter
+    FileFilterMatch
+    FileInfoCompression
+    FileMatch
+    FileRules
+    FollowSymLinks
+    FuzzyIndexingMode
+    HTMLLinksMetaName
+    IgnoreFirstChar
+    IgnoreLastChar
+    IgnoreLimit
+    IgnoreMetaTags
+    IgnoreNumberChars
+    IgnoreTotalWordCountWhenRanking
+    IgnoreWords
+    ImageLinksMetaName
+    IncludeConfigFile
+    IndexAdmin
+    IndexAltTagMetaName
+    IndexComments
+    IndexContents
+    IndexDescription
+    IndexDir
+    IndexFile
+    IndexName
+    IndexOnly
+    IndexPointer
+    IndexReport
+    MaxDepth
+    MaxWordLimit
+    MetaNameAlias
+    MetaNames
+    MetaNamesRank
+    MinWordLimit
+    NoContents
+    obeyRobotsNoIndex
+    ParserWarnLevel
+    PreSortedIndex
+    PropCompressionLevel
+    PropertyNameAlias
+    PropertyNames
+    PropertyNamesCompareCase
+    PropertyNamesDate
+    PropertyNamesIgnoreCase
+    PropertyNamesMaxLength
+    PropertyNamesNoStripChars
+    PropertyNamesNumeric
+    PropertyNamesSortKeyLength
+    RecursionDepth
+    ReplaceRules
+    ResultExtFormatName
+    SpiderDirectory
+    StoreDescription
+    SwishProgParameters
+    SwishSearchDefaultRule
+    SwishSearchOperators
+    TmpDir
+    TranslateCharacters
+    TruncateDocSize
+    UndefinedMetaTags
+    UndefinedMetaNames
+    UndefinedXMLAttributes
+    UseSoundex
+    UseStemming
+    UseWords
+    WordCharacters
+    Words
+    XMLClassAttributes
+);
 
-  AbsoluteLinks
-  BeginCharacters
-  BumpPositionCounterCharacters
-  Buzzwords
-  ConvertHTMLEntities
-  DefaultContents
-  Delay
-  DontBumpPositionOnEndTags
-  DontBumpPositionOnStartTags
-  EnableAltSearchSyntax
-  EndCharacters
-  EquivalentServer
-  ExtractPath
-  FileFilter
-  FileFilterMatch
-  FileInfoCompression
-  FileMatch
-  FileRules
-  FollowSymLinks
-  FuzzyIndexingMode
-  HTMLLinksMetaName
-  IgnoreFirstChar
-  IgnoreLastChar
-  IgnoreLimit
-  IgnoreMetaTags
-  IgnoreNumberChars
-  IgnoreTotalWordCountWhenRanking
-  IgnoreWords
-  ImageLinksMetaName
-  IncludeConfigFile
-  IndexAdmin
-  IndexAltTagMetaName
-  IndexComments
-  IndexContents
-  IndexDescription
-  IndexDir
-  IndexFile
-  IndexName
-  IndexOnly
-  IndexPointer
-  IndexReport
-  MaxDepth
-  MaxWordLimit
-  MetaNameAlias
-  MetaNames
-  MinWordLimit
-  NoContents
-  obeyRobotsNoIndex
-  ParserWarnLevel
-  PreSortedIndex
-  PropCompressionLevel
-  PropertyNameAlias
-  PropertyNames
-  PropertyNamesCompareCase
-  PropertyNamesDate
-  PropertyNamesIgnoreCase
-  PropertyNamesMaxLength
-  PropertyNamesNoStripChars
-  PropertyNamesNumeric
-  PropertyNamesSortKeyLength
-  RecursionDepth
-  ReplaceRules
-  ResultExtFormatName
-  SpiderDirectory
-  StoreDescription
-  SwishProgParameters
-  SwishSearchDefaultRule
-  SwishSearchOperators
-  TmpDir
-  TranslateCharacters
-  TruncateDocSize
-  UndefinedMetaTags
-  UndefinedMetaNames
-  UndefinedXMLAttributes
-  UseSoundex
-  UseStemming
-  UseWords
-  WordCharacters
-  Words
-  XMLClassAttributes
+__PACKAGE__->mk_accessors( qw( file debug verbose ), @Opts );
 
-  /;
-
-sub new
-{
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-    my $self  = {};
-    bless($self, $class);
-    $self->_init(@_);
+sub new {
+    my $class = shift;
+    my $opts  = ref( $_[0] ) ? $_[0] : {@_};
+    my $self  = $class->SUPER::new($opts);
+    $self->{'_start'} = time;
+    $self->IgnoreTotalWordCountWhenRanking(0)
+        unless defined $self->IgnoreTotalWordCountWhenRanking;
     return $self;
 }
 
-sub _init
-{
+=head2 set
+
+Override the Class::Accessor method.
+
+=cut
+
+sub set {
     my $self = shift;
-    $self->{'_start'} = time;
+    my ( $key, $val, $append ) = @_;
 
-    $self->mk_accessors(qw/ file debug /, @Opts);
-
-    if (@_)
-    {
-        my %extra = @_;
-        $self->$_($extra{$_}) for keys %extra;
-    }
-
-    $self->IgnoreTotalWordCountWhenRanking(0)
-      unless defined $self->IgnoreTotalWordCountWhenRanking;
-}
-
-sub set
-{
-    my $self = shift;
-    my ($key, $val, $append) = @_;
-    
-    if ($key eq 'file' or $key eq 'debug')
-    {
+    if ( $key eq 'file' or $key eq 'debug' ) {
         return $self->{$key} = $val;
     }
-    elsif (exists $unique{$key})
-    {
+    elsif ( exists $unique{$key} ) {
         return $self->_name_hash(@_);
     }
 
     $self->{$key} = [] unless defined $self->{$key};
 
     # save everything as an array ref regardless of input
-    if (ref $val)
-    {
-        if (ref($val) eq 'ARRAY')
-        {
-            $self->{$key} = $append ? [@{$self->{$key}}, @$val] : $val;
+    if ( ref $val ) {
+        if ( ref($val) eq 'ARRAY' ) {
+            $self->{$key} = $append ? [ @{ $self->{$key} }, @$val ] : $val;
         }
-        else
-        {
+        else {
             croak "$key cannot accept a " . ref($val) . " ref as a value";
         }
     }
-    else
-    {
-        $self->{$key} = $append ? [@{$self->{$key}}, $val] : [$val];
+    else {
+        $self->{$key} = $append ? [ @{ $self->{$key} }, $val ] : [$val];
     }
 
 }
 
-sub get
-{
+=head2 get
+
+Override the Class::Accessor method.
+
+=cut
+
+sub get {
     my $self = shift;
     my $key  = shift;
 
-    if (exists $unique{$key})
-    {
+    if ( exists $unique{$key} ) {
         return $self->_name_hash($key);
     }
-    else
-    {
+    else {
         return $self->{$key};
     }
 }
 
-sub _name_hash
-{
+sub _name_hash {
     my $self = shift;
     my $name = shift;
 
-    if (@_)
-    {
+    if (@_) {
 
         #carp "setting $name => " . join(', ', @_);
-        for my $v (@_)
-        {
+        for my $v (@_) {
             my @v = ref $v ? @$v : ($v);
-            $self->{$name}->{lc($_)} = 1 for @v;
+            $self->{$name}->{ lc($_) } = 1 for @v;
         }
     }
-    else
-    {
+    else {
 
         #carp "getting $name -> " . join(', ', sort keys %{$self->{$name}});
 
     }
 
-    return [sort keys %{$self->{$name}}];
+    return [ sort keys %{ $self->{$name} } ];
 }
 
 =head2 read2( I<path/file> )
@@ -282,13 +269,12 @@ Example:
  
 =cut
 
-sub read2
-{
+sub read2 {
     my $self = shift;
     my $file = shift or croak "version2 type file required";
 
-    my $buf =
-      read_file($file);   # can't read as UTF8 since version2 doesn't support it
+    # stringify $file in case it is a Path::Class object
+    my $buf = read_file($file);
 
     # filter include syntax to work with Config::General's
     $buf =~ s,IncludeConfigFile (.+?)\n,<<include $1>>\n,g;
@@ -296,18 +282,15 @@ sub read2
     my $dir = Path::Class::File->new($file)->parent;
 
     # TODO are these the right opts?
-    my $c =
-      Config::General->new(
-                           -String          => $buf,
-                           -IncludeRelative => 1,
-                           -ConfigPath      => [$dir]
-                          )
-      or return;
+    my $c = Config::General->new(
+        -String          => $buf,
+        -IncludeRelative => 1,
+        -ConfigPath      => [$dir]
+    ) or return;
 
     my %conf = $c->getall;
 
-    for (keys %conf)
-    {
+    for ( keys %conf ) {
         my $v = $conf{$_};
         $self->$_($v);
     }
@@ -334,18 +317,16 @@ Returns name of the file written by write2().
 
 =cut
 
-sub write2
-{
+sub write2 {
     my $self = shift;
     my $file = shift;
     my $path = $file;
-    unless ($file)
-    {
-        ($file, $path) = tempfile();
+    unless ($file) {
+        ( $file, $path ) = tempfile();
     }
 
     my $buf = $self->stringify;
-    write_file($file, $buf);
+    write_file( $file, $buf );
 
     print STDERR "wrote config file $path using $file" if $self->debug;
 
@@ -361,11 +342,10 @@ Returns current Config object as a hash ref.
 
 =cut
 
-sub as_hash
-{
+sub as_hash {
     my $self = shift;
-    my $c = Config::General->new(-String => $self->stringify);
-    return {$c->getall};
+    my $c = Config::General->new( -String => $self->stringify );
+    return { $c->getall };
 }
 
 =head2 stringify
@@ -380,49 +360,43 @@ equivalent:
 
 =cut
 
-sub stringify
-{
+sub stringify {
     my $self = shift;
     my @config;
 
-    # must pass metanames and properties first, since others may depend on them
-    # in swish config parsing.
-    for my $method (keys %unique)
-    {
+   # must pass metanames and properties first, since others may depend on them
+   # in swish config parsing.
+    for my $method ( keys %unique ) {
         my $v = $self->$method;
 
         next unless scalar(@$v);
 
         #carp "adding $method to config";
-        push(@config, "$method " . join(' ', @$v));
+        push( @config, "$method " . join( ' ', @$v ) );
     }
 
-    for my $name (@Opts)
-    {
+    for my $name (@Opts) {
         next if exists $unique{$name};
 
         my $v = $self->$name;
         next unless defined $v;
-        if (ref $v)
-        {
-            push(@config, "$name $_") for @$v;
+        if ( ref $v ) {
+            push( @config, "$name $_" ) for @$v;
         }
-        else
-        {
-            push(@config, "$name $v");
+        else {
+            push( @config, "$name $v" );
         }
     }
 
-    my $buf = join("\n", @config) . "\n";
+    my $buf = join( "\n", @config ) . "\n";
 
     print STDERR $buf if $self->debug;
 
     return $buf;
 }
 
-sub _write_utf8
-{
-    my ($self, $file, $buf) = @_;
+sub _write_utf8 {
+    my ( $self, $file, $buf ) = @_;
     binmode $file, ':utf8';
     print {$file} $buf;
 }
@@ -442,33 +416,31 @@ If I<file> is omitted, uses the current values in the calling object.
 
 =cut
 
-sub ver2_to_xml
-{
+sub ver2_to_xml {
     my $self = shift;
     my $file = shift;
 
     # list of config directives that take arguments to the opt value
     # i.e. the directive has 3 or more parts
-    my %takes_arg = map { $_ => 1 }
-      qw(
+    my %takes_arg = map { $_ => 1 } qw(
 
-      StoreDescription
-      PropertyNamesSortKeyLength
-      PropertyNamesMaxLength
-      PropertyNameAlias
-      MetaNameAlias
-      IndexContents
-      IgnoreWords
-      ExtractPath
-      FileFilter
-      FileRules
-      ReplaceRules
-      Words
+        StoreDescription
+        PropertyNamesSortKeyLength
+        PropertyNamesMaxLength
+        PropertyNameAlias
+        MetaNameAlias
+        IndexContents
+        IgnoreWords
+        ExtractPath
+        FileFilter
+        FileRules
+        ReplaceRules
+        Words
 
-      );
+    );
 
     my $config = $file ? $self->new->read2($file) : $self->as_hash;
-    my $time   = localtime();
+    my $time = localtime();
 
     # TODO  what if this encoding is not correct?
     my $xml = <<EOF;
@@ -477,16 +449,13 @@ sub ver2_to_xml
 <swishconfig>
 EOF
 
-  KEY: for my $k (sort keys %$config)
-    {
-        my @args = ref $config->{$k} ? @{$config->{$k}} : ($config->{$k});
+KEY: for my $k ( sort keys %$config ) {
+        my @args = ref $config->{$k} ? @{ $config->{$k} } : ( $config->{$k} );
 
-      ARG: for my $arg (@args)
-        {
+    ARG: for my $arg (@args) {
             $xml .= "  <$k";
-            if ($takes_arg{$k})
-            {
-                my ($class, $v) = ($arg =~ m/^\ *(\S+)\ +(.+)$/);
+            if ( $takes_arg{$k} ) {
+                my ( $class, $v ) = ( $arg =~ m/^\ *(\S+)\ +(.+)$/ );
                 $arg = $v;
                 $xml .= ' type="' . $XMLer->utf8_safe($class) . '"';
             }

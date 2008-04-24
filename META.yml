@@ -1,24 +1,22 @@
---- #YAML:1.0
-name:                SWISH-Prog
-version:             0.08
-abstract:            Swish-e document aggregation
-license:             ~
-generated_by:        ExtUtils::MakeMaker version 6.36
-distribution_type:   module
-requires:     
-    Class::Accessor::Fast:         0.01
+# http://module-build.sourceforge.net/META-spec.html
+#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
+name:         SWISH-Prog
+version:      0.20
+version_from: lib/SWISH/Prog.pm
+installdirs:  site
+requires:
+    Class::Accessor::Fast:         0
     Config::General:               2.31
-    Data::Dump:                    0.01
-    File::Basename:                0.01
-    File::Copy:                    0.01
+    Data::Dump:                    0
+    File::Basename:                0
     File::Slurp:                   0
-    File::Temp:                    0.01
-    MIME::Types:                   0.01
+    File::Temp:                    0
+    MIME::Types:                   0
+    Path::Class:                   0
+    Scalar::Util:                  0
     Search::Tools:                 0.16
-    SWISH::Filter:                 0.07
-    YAML::Syck:                    0.72
-meta-spec:
-    url:     http://module-build.sourceforge.net/META-spec-v1.2.html
-    version: 1.2
-author:
-    - Peter Karman <karman@cpan.org>
+    SWISH::Filter:                 0.09
+    Test::More:                    0
+
+distribution_type: module
+generated_by: ExtUtils::MakeMaker version 6.30

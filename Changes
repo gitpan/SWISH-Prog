@@ -61,3 +61,6 @@ Revision history for Perl extension Prog.
         * allow for non-standard docclass names
 
 
+0.20    xxx
+        * complete rewrite of the API for Swish3 development
+

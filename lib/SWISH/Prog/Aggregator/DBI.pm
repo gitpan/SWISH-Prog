@@ -1,0 +1,345 @@
+package SWISH::Prog::Aggregator::DBI;
+
+use strict;
+use warnings;
+use base qw( SWISH::Prog::Aggregator );
+use Carp;
+use Data::Dump qw( dump );
+use DBI;
+use SWISH::Prog::Utils;
+
+__PACKAGE__->mk_accessors(qw( db title alias_columns schema ));
+
+our $VERSION = '0.20';
+our $XMLer   = $SWISH::Prog::Utils::XML;
+
+=pod
+
+=head1 NAME
+
+SWISH::Prog::Aggregator::DBI - index DB records with Swish-e
+
+=head1 SYNOPSIS
+    
+    use SWISH::Prog::Aggregator::DBI;
+    use Carp;
+    
+    my $aggregator = SWISH::Prog::Aggregator::DBI->new(
+        db => [
+            "DBI:mysql:database=movies;host=localhost;port=3306",
+            'some_user', 'some_secret_pass',
+            {
+                RaiseError  => 1,
+                HandleError => sub { confess(shift) },
+            }
+        ],
+        schema => {
+          'moviesIlike' => {
+               title       => {type => 'char', bias => 1},
+               synopsis    => {type => 'char', bias => 1},
+               year        => {type => 'int',  bias => 1},
+               director    => {type => 'char', bias => 1},
+               producer    => {type => 'char', bias => 1},
+               awards      => {type => 'char', bias => 1},
+               date        => {type => 'date', bias => 1},
+               swishdescription => { synopsis => 1, producer => 1 },
+               swishtitle       => 'title',
+          }
+        }
+        alias_columns => 1,
+        indexer => SWISH::Prog::Indexer::Native->new
+    );
+    
+    $aggregator->crawl();
+
+
+=head1 DESCRIPTION
+
+SWISH::Prog::Aggregator::DBI is a SWISH::Prog::Aggregator subclass 
+designed for providing full-text search for databases.
+
+=head1 METHODS
+
+Since SWISH::Prog::Aggregator::DBI inherits from SWISH::Prog::Aggregator, 
+read that documentation first. Any overridden methods are documented here.
+
+=head2 new( I<opts> )
+
+Create new aggregator object. 
+
+The following I<opts> are required:
+
+=over
+
+=item db => I<connect_info>
+
+I<connect_info> is passed
+directly to DBI's connect() method, so see the DBI docs for syntax.
+If I<connect_info> is a DBI handle object, it is accepted as is.
+If I<connect_info> is an array ref, it will be dereferenced and
+passed to connect(). Otherwise it will be passed to connect as is.
+
+=item schema => I<db_schema>
+
+I<db_schema> is a hashref of table names and column descriptions.
+Each key should be a table name. Each value should be a hashref of 
+column descriptions, where the key is the column name and the value
+is a hashref of type and bias. See the SYNOPSIS.
+
+There are two special column names: swishtitle and swishdescription.
+These are reserved for mapping real column names to Swish-e property names
+for returning in search results. C<swishtitle> should be the name of a column,
+and C<swishdescription> should be a hashref of column names to include
+in the StoreDescription value.
+
+=item indexer => I<indexer_obj>
+
+A SWISH::Prog::Indexer-derived object.
+
+=back
+
+The following I<opts> are optional:
+
+=over
+
+=item alias_columns => 0|1
+
+The C<alias_columns> flag indicates whether all columns should be searchable
+under the default MetaName of C<swishdefault>. The default is 1 (true). This
+is B<not> the default behaviour of swish-e; this is a feature of SWISH::Prog.
+
+=back
+
+B<NOTE:> The new() method simply inherits from SWISH::Prog::Aggregator, 
+so any params valid for that method are allowed here.
+
+=head2 init
+
+See SWISH::Prog::Class. This method does all the setup.
+
+=cut
+
+sub init {
+    my $self = shift;
+    $self->SUPER::init(@_);
+
+    # verify DBI connection
+    if ( defined( $self->db ) ) {
+
+        if ( ref( $self->db ) eq 'ARRAY' ) {
+            $self->db( DBI->connect( @{ $self->{db} } ) );
+        }
+        elsif ( ref( $self->db ) && $self->db->isa('DBI::db') ) {
+
+            # do nothing
+        }
+        else {
+            $self->db( DBI->connect( $self->db ) );
+        }
+    }
+    else {
+        croak "db required";
+    }
+
+    # verify schema
+    if ( defined $self->schema ) {
+
+        my $schema = $self->schema;
+        unless ( ref($schema) eq 'HASH' ) {
+            croak "schema must be a hashref";
+        }
+        for my $table ( keys %$schema ) {
+            my $cols = $schema->{$table};
+            unless ( ref($cols) eq 'HASH' ) {
+                croak "column descriptions must be a hashref";
+            }
+            for my $colname ( keys %$cols ) {
+                my $desc = $cols->{$colname};
+                unless ( ref($desc) eq 'HASH' ) {
+                    croak "$colname description must be a hashref";
+                }
+                $desc->{type}
+                    ||= 'char'; # TODO auto-make property types based on this.
+                $desc->{bias} ||= 1;
+            }
+        }
+    }
+    else {
+        croak "schema required";
+    }
+
+    $self->{alias_columns} = 1 unless exists $self->{alias_columns};
+
+    # unless metanames are defined, use all the column names from schema
+    my $m = $self->config->MetaNames;
+    unless (@$m) {
+        for my $table ( keys %{ $self->{schema} } ) {
+            my $columns = $self->{schema}->{$table};
+            my %ranks;
+            push( @{ $ranks{ $columns->{$_}->{bias} } }, $_ )
+                for sort keys %$columns;
+
+            for my $rank ( keys %ranks ) {
+                $self->config->MetaNamesRank(
+                    "$rank " . join( ' ', @{ $ranks{$rank} } ), 1 );
+            }
+        }
+    }
+
+    # alias the top level tags to that default search
+    # will match any metaname in any table
+    if ( $self->alias_columns ) {
+        $self->config->MetaNameAlias(
+            'swishdefault '
+                . join( ' ',
+                map { '_' . $_ . '_row' }
+                    sort keys %{ $self->{schema} } ),
+            1    # always append
+        );
+    }
+
+    # add 'table' metaname
+    $self->config->MetaNames('table');
+
+    # save all row text in the swishdescription property for excerpts
+    $self->config->StoreDescription('XML* <_desc>');
+
+}
+
+=head2 crawl
+
+Create index.
+
+Returns number of rows indexed.
+
+=cut
+
+sub crawl {
+    my $self = shift;
+
+    my @tables = sort keys %{ $self->{schema} };
+
+T: for my $table (@tables) {
+
+        my $table_info = $self->{schema}->{$table};
+
+        # which columns to index
+        my @cols = sort keys %$table_info;
+
+        # special col names
+        my $desc  = delete( $table_info->{swishdescription} ) || {};
+        my $title = delete( $table_info->{swishtitle} )       || '';
+
+        # TODO test other dbs besides mysql for quoting etc.
+        $self->{count} += $self->_do_table(
+            name  => $table . ".index",
+            sql   => "SELECT `" . join( '`,`', @cols ) . "` FROM $table",
+            table => $table,
+            desc  => $desc,
+            title => $title,
+        );
+    }
+
+    return $self->{count};
+}
+
+sub _do_table {
+    my $self = shift;
+    my %opts = @_;
+
+    if ( !$opts{sql} ) {
+        croak "need SQL statement to index with";
+    }
+
+    $opts{table} ||= '';
+    $opts{title} ||= '';
+
+    my $counter = 0;
+    my $indexer = $self->indexer;
+
+    my $sth = $self->db->prepare( $opts{sql} )
+        or croak "DBI prepare() failed: " . $self->db->errstr;
+    $sth->execute or croak "SELECT failed " . $sth->errstr;
+
+    while ( my $row = $sth->fetchrow_hashref ) {
+
+        my $title = $row->{ $opts{title} } || '[ no title ]';
+
+        my $xml = $self->_row2xml( $XMLer->tag_safe( $opts{table} ),
+            $row, $title, \%opts );
+
+        my $doc = $self->doc_class->new(
+            content => $xml,
+            url     => ++$counter,
+            modtime => time(),
+            parser  => 'XML*',
+            type    => 'application/x-swish-dbi',    # TODO ??
+            row     => $row
+        );
+
+        $indexer->process($doc);
+    }
+
+    $sth->finish;
+
+    return $counter;
+
+}
+
+sub _row2xml {
+    my ( $self, $table, $row, $title, $opts ) = @_;
+
+    my $xml
+        = "<_${table}_row>"
+        . "<table>"
+        . $table
+        . "</table>"
+        . "<swishtitle>"
+        . $XMLer->utf8_safe($title)
+        . "</swishtitle>"
+        . "<_body>";
+
+    for my $col ( sort keys %$row ) {
+        my @x = (
+            $XMLer->start_tag($col),
+            $XMLer->utf8_safe( $row->{$col} ),
+            $XMLer->end_tag($col)
+        );
+
+        if ( $opts->{desc}->{$col} ) {
+            unshift( @x, '<_desc>' );
+            push( @x, '</_desc>' );
+        }
+
+        $xml .= join( '', @x );
+    }
+    $xml .= "</_body></_${table}_row>";
+
+    #$self->debug and warn $xml . "\n";
+
+    return $xml;
+}
+
+1;
+
+__END__
+
+=head1 SEE ALSO
+
+L<http://swish-e.org/docs/>
+
+SWISH::Prog, Search::Tools
+
+
+=head1 AUTHOR
+
+Peter Karman, E<lt>perl@peknet.comE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2008 by Peter Karman
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
+
+=cut
