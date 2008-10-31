@@ -9,7 +9,7 @@ use Data::Dump qw( dump );
 use Scalar::Util qw( blessed );
 use SWISH::Prog::Config;
 
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 __PACKAGE__->mk_accessors(qw( aggregator ));
 

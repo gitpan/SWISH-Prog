@@ -7,7 +7,7 @@ use Carp;
 use File::Slurp;
 use File::Find;
 
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 =pod
 

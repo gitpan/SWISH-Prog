@@ -1,5 +1,7 @@
 use Test::More tests => 15;
 
+use_ok('SWISH::Prog::Indexer::Native');
+
 SKIP: {
 
     eval "use SWISH::Prog::Aggregator::Object";
@@ -15,12 +17,10 @@ SKIP: {
         __PACKAGE__->mk_accessors(@meth);
     }
 
-    use_ok('SWISH::Prog::Indexer::Native');
-
     # is executable present?
     my $indexer = SWISH::Prog::Indexer::Native->new;
     if ( !$indexer->swish_check ) {
-        skip "swish-e not installed", 15;
+        skip "swish-e not installed", 14;
     }
 
     # make objects

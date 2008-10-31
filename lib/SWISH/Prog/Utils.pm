@@ -7,6 +7,8 @@ use MIME::Types;
 use File::Basename;
 use Search::Tools::XML;
 
+our $VERSION = '0.21';
+
 =pod
 
 =head1 NAME
@@ -44,9 +46,8 @@ Hash of MIME types to their equivalent parser.
 
 =cut
 
-our $VERSION = '0.20';
-our $ExtRE   = qr{(html|htm|xml|txt|pdf|ps|doc|ppt|xls|mp3)(\.gz)?}io;
-our $XML     = Search::Tools::XML->new;
+our $ExtRE = qr{(html|htm|xml|txt|pdf|ps|doc|ppt|xls|mp3)(\.gz)?}io;
+our $XML   = Search::Tools::XML->new;
 
 our %ParserTypes = (
 
@@ -104,6 +105,87 @@ sub path_parts {
     # TODO build regex from ->config
     my ( $file, $path, $ext ) = fileparse( $url, $re );
     return ( $path, $file, $ext );
+}
+
+=head2 perl_to_xml( I<ref>, I<root_element> )
+
+Similar to the XML::Simple XMLout() feature, perl_to_xml()
+will take a Perl data structure I<ref> and convert it to XML,
+using I<root_element> as the top-level element.
+
+=cut
+
+sub perl_to_xml {
+    my $self = shift;
+    my $perl = shift;
+    my $root = shift || '_root';
+    unless ( defined $perl ) {
+        croak "perl data struct required";
+    }
+
+    if ( !ref $perl ) {
+        return $XML->start_tag($root)
+            . $XML->utf8_safe($perl)
+            . $XML->end_tag($root);
+    }
+
+    my $xml = $XML->start_tag($root);
+    $self->_ref_to_xml( $perl, '', \$xml );
+    $xml .= $XML->end_tag($root);
+    return $xml;
+}
+
+sub _ref_to_xml {
+    my ( $self, $perl, $root, $xml_ref ) = @_;
+    my $type = ref $perl;
+    if ( !$type ) {
+        $$xml_ref .= $XML->start_tag($root) if length($root);
+        $$xml_ref .= $XML->utf8_safe($perl);
+        $$xml_ref .= $XML->end_tag($root)   if length($root);
+        $$xml_ref .= "\n";    # just for debugging
+    }
+    elsif ( $type eq 'SCALAR' ) {
+        $self->_scalar_to_xml( $perl, $root, $xml_ref );
+    }
+    elsif ( $type eq 'ARRAY' ) {
+        $self->_array_to_xml( $perl, $root, $xml_ref );
+    }
+    elsif ( $type eq 'HASH' ) {
+        $self->_hash_to_xml( $perl, $root, $xml_ref );
+    }
+    else {
+        croak "unsupported ref type: $type";
+    }
+
+}
+
+sub _array_to_xml {
+    my ( $self, $perl, $root, $xml_ref ) = @_;
+    for my $thing (@$perl) {
+        if ( ref $thing and length($root) ) {
+            $$xml_ref .= $XML->start_tag($root);
+        }
+        $self->_ref_to_xml( $thing, $root, $xml_ref );
+        if ( ref $thing and length($root) ) {
+            $$xml_ref .= $XML->end_tag($root);
+        }
+    }
+}
+
+sub _hash_to_xml {
+    my ( $self, $perl, $root, $xml_ref ) = @_;
+    for my $key ( keys %$perl ) {
+        my $thing = $perl->{$key};
+        $self->_ref_to_xml( $thing, $key, $xml_ref );
+    }
+}
+
+sub _scalar_to_xml {
+    my ( $self, $perl, $root, $xml_ref ) = @_;
+    $$xml_ref
+        .= $XML->start_tag($root)
+        . $XML->utf8_safe($$perl)
+        . $XML->end_tag($root);
 }
 
 1;

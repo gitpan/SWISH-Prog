@@ -1,14 +1,14 @@
 use Test::More tests => 5;
 
 use_ok('SWISH::Prog');
+use_ok('SWISH::Prog::Indexer::Native');
 
 SKIP: {
-    use_ok('SWISH::Prog::Indexer::Native');
 
     # is executable present?
     my $indexer = SWISH::Prog::Indexer::Native->new;
     if ( !$indexer->swish_check ) {
-        skip "swish-e not installed", 4;
+        skip "swish-e not installed", 3;
     }
 
     ok( my $program = SWISH::Prog->new(

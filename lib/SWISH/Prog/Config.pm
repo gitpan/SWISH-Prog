@@ -68,7 +68,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 our $XMLer = Search::Tools::XML->new;
 

@@ -7,7 +7,7 @@ use SWISH::Prog::InvIndex::Native;
 use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 __PACKAGE__->mk_accessors(qw( fh exe opts ));
 

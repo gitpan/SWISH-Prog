@@ -15,6 +15,11 @@ SKIP: {
         skip "swish-e not installed", 4;
     }
 
+    #maildir requires these dirs but makemaker won't package them
+    mkdir('t/maildir/cur');
+    mkdir('t/maildir/tmp');
+    mkdir('t/maildir/new');
+
     ok( my $mail = SWISH::Prog::Aggregator::Mail->new(
             indexer => SWISH::Prog::Indexer::Native->new(),
             verbose => $ENV{PERL_DEBUG},
