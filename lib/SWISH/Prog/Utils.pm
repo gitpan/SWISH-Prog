@@ -7,7 +7,7 @@ use MIME::Types;
 use File::Basename;
 use Search::Tools::XML;
 
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 
 =pod
 
@@ -176,7 +176,15 @@ sub _hash_to_xml {
     my ( $self, $perl, $root, $xml_ref ) = @_;
     for my $key ( keys %$perl ) {
         my $thing = $perl->{$key};
-        $self->_ref_to_xml( $thing, $key, $xml_ref );
+        if ( ref $thing ) {
+            $$xml_ref .= $XML->start_tag($key);
+            $self->_ref_to_xml( $thing, $key, $xml_ref );
+            $$xml_ref .= $XML->end_tag($key);
+            $$xml_ref .= "\n";                  # just for debugging
+        }
+        else {
+            $self->_ref_to_xml( $thing, $key, $xml_ref );
+        }
     }
 }
 

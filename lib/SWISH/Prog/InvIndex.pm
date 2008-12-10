@@ -11,7 +11,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 
 __PACKAGE__->mk_accessors(qw( path clobber ));
 
@@ -31,7 +31,7 @@ sub open {
     my $self = shift;
 
     if ( -d $self->path && $self->clobber ) {
-        $self->path->rmtree( 1, 1 );
+        $self->path->rmtree( $self->verbose, 1 );
     }
     elsif ( -f $self->path ) {
         croak $self->path
@@ -39,7 +39,7 @@ sub open {
     }
 
     if ( !-d $self->path ) {
-        $self->path->mkpath(1);
+        $self->path->mkpath($self->verbose);
     }
 
     1;

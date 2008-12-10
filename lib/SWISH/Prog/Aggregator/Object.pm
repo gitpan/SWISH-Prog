@@ -13,7 +13,7 @@ use Scalar::Util qw( blessed );
 __PACKAGE__->mk_accessors(
     qw( methods class title url modtime class_meta serial_format ));
 
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 our $XMLer   = $SWISH::Prog::Utils::XML;
 
 =pod

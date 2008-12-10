@@ -8,7 +8,7 @@ use Carp;
 __PACKAGE__->mk_accessors(qw( version ));
 use bytes;    # so length() measures bytes
 
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 our $AutoURL = time();
 our %Headers = (
     2 => {
@@ -31,6 +31,9 @@ our %Headers = (
 sub init {
     my $self = shift;
     $self->{version} ||= 2;
+    if ($ENV{SWISH3}) {
+        $self->{version} = 3;
+    }
 }
 
 sub head {

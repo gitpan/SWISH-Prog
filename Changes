@@ -70,4 +70,9 @@ Revision history for Perl extension Prog.
         * add perl_to_xml() in Utils
         * change t/04 to manually create dirs at test time
 
+0.22    10 Dec 2008
+        * added support for SWISH::Prog::DBI
+        * use SWISH::3 for slurping files, if available.
+        * fix bug in SWISH::Prog::Utils->perl_to_xml where hash refs were not getting
+          tagged.
 
