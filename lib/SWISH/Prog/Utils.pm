@@ -7,7 +7,7 @@ use MIME::Types;
 use File::Basename;
 use Search::Tools::XML;
 
-our $VERSION = '0.22';
+our $VERSION = '0.23';
 
 =pod
 

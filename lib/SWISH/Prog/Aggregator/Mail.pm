@@ -8,7 +8,7 @@ use Search::Tools::XML;
 use Mail::Box::Manager;
 use base qw( SWISH::Prog::Aggregator );
 
-our $VERSION = '0.22';
+our $VERSION = '0.23';
 our $XMLer   = Search::Tools::XML->new;
 
 =pod

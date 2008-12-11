@@ -76,3 +76,6 @@ Revision history for Perl extension Prog.
         * fix bug in SWISH::Prog::Utils->perl_to_xml where hash refs were not getting
           tagged.
 
+0.23    11 Dec 2008
+        * properly clean up temp Config files
+

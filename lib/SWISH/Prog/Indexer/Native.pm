@@ -3,11 +3,12 @@ use strict;
 use warnings;
 use base qw( SWISH::Prog::Indexer );
 use Carp;
+use File::Temp ();
 use SWISH::Prog::InvIndex::Native;
 use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 
-our $VERSION = '0.22';
+our $VERSION = '0.23';
 
 __PACKAGE__->mk_accessors(qw( fh exe opts ));
 

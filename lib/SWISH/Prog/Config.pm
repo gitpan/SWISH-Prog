@@ -60,7 +60,7 @@ use Carp;
 use File::Slurp;
 use Config::General;
 use Data::Dump qw( dump );
-use File::Temp qw( tempfile );
+use File::Temp ();
 use Search::Tools::XML;
 use Path::Class qw();    # we have our own file() method
 use overload(
@@ -68,7 +68,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.22';
+our $VERSION = '0.23';
 
 our $XMLer = Search::Tools::XML->new;
 
@@ -273,8 +273,8 @@ sub read2 {
     my $self = shift;
     my $file = shift or croak "version2 type file required";
 
-    # stringify $file in case it is a Path::Class object
-    my $buf = read_file($file);
+    # stringify $file in case it is an object
+    my $buf = read_file("$file");
 
     # filter include syntax to work with Config::General's
     $buf =~ s,IncludeConfigFile (.+?)\n,<<include $1>>\n,g;
@@ -319,21 +319,21 @@ Returns name of the file written by write2().
 
 sub write2 {
     my $self = shift;
-    my $file = shift;
-    my $path = $file;
-    unless ($file) {
-        ( $file, $path ) = tempfile();
+    my $file = shift || File::Temp->new();
+
+    # stringify both
+    write_file( "$file", "$self" );
+
+    warn "wrote config file $file" if $self->debug;
+
+    # remember file. this especially crucial for File::Temp
+    # since we want it to hang around till $self is DESTROYed
+    if ( ref $file ) {
+        $self->{__tmpfile} = $file;
     }
+    $self->file("$file");
 
-    my $buf = $self->stringify;
-    write_file( $file, $buf );
-
-    print STDERR "wrote config file $path using $file" if $self->debug;
-
-    # remember file
-    $self->file($path);
-
-    return $path;
+    return $self->file;
 }
 
 =head2 as_hash

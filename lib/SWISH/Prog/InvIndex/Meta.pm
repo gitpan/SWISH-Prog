@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use base qw( SWISH::Prog::Class );
 
-our $VERSION = '0.22';
+our $VERSION = '0.23';
 
 # index metadata. read/write libswish3 file xml format.
 #
