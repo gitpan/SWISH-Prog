@@ -79,3 +79,10 @@ Revision history for Perl extension Prog.
 0.23    11 Dec 2008
         * properly clean up temp Config files
 
+0.24    20 Jan 2009  (Happy Obama Day!)
+        * add base Searcher, Results and Result classes
+        * refactor QueryParser to use Search::QueryParser::SQL
+        * flesh out the InvIndex::Meta class, adding XML::Simple dependency
+        * IMPORTANT: rename Native classes to match naming convention
+ 
+

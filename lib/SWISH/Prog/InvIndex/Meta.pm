@@ -2,11 +2,35 @@ package SWISH::Prog::InvIndex::Meta;
 use strict;
 use warnings;
 use base qw( SWISH::Prog::Class );
+use Carp;
+use XML::Simple;
 
-our $VERSION = '0.23';
+our $VERSION = '0.24';
+
+__PACKAGE__->mk_accessors(qw( file data invindex ));
 
 # index metadata. read/write libswish3 file xml format.
 #
+
+sub init {
+    my $self = shift;
+    $self->{file} = $self->invindex->path->file('swish.xml');
+    $self->{data} = XMLin("$self->{file}");
+
+    #warn Data::Dump::dump( $self->{data} );
+}
+
+sub AUTOLOAD {
+    my $self   = shift;
+    my $method = our $AUTOLOAD;
+    $method =~ s/.*://;
+    return if $method eq 'DESTROY';
+
+    if ( exists $self->{data}->{$method} ) {
+        return $self->{data}->{$method};
+    }
+    croak "no such Meta key: $method";
+}
 
 1;
 
@@ -30,6 +54,12 @@ A SWISH::Prog::InvIndex::Meta object represents the metadata for an
 InvIndex.
 
 =head1 METHODS
+
+=head2 init
+
+Read and initialize the swish.xml header file.
+
+=cut
 
 =head1 AUTHOR
 

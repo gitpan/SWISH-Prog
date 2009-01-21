@@ -13,7 +13,9 @@ my %required = (
     'Scalar::Util'          => 0,
     'Test::More'            => 0,
     'File::Slurp'           => 0,         # Search::Tools also requires this
-
+    'Search::QueryParser::SQL' => 0,
+    'XML::Simple'           => 0,
+    'SWISH::API::Object'    => 0.12,      # native searcher requires
 );
 
 my %recommended = (
@@ -84,7 +86,7 @@ WriteMakefile(
     ),
     clean => {
         FILES =>
-            't/dbi_index t/swishobjects t/testindex index.swish t/xapian_index'
+            't/dbi_index t/swishobjects t/testindex t/object.index t/xapian_index'
     },
 
 );

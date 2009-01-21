@@ -1,15 +1,25 @@
-package SWISH::Prog::InvIndex::Native;
+package SWISH::Prog::Native::InvIndex;
 use strict;
 use warnings;
 use Carp;
 use base qw( SWISH::Prog::InvIndex );
 __PACKAGE__->mk_accessors(qw( file ));
 
-our $VERSION = '0.23';
+our $VERSION = '0.24';
 
 =head1 NAME
 
-SWISH::Prog::InvIndex::Native - the native Swish-e index format
+SWISH::Prog::Native::InvIndex - the native Swish-e index format
+
+=head1 SYNOPSIS
+
+ # see SWISH::Prog::InvIndex
+
+=head1 DESCRIPTION
+
+The Native InvIndex represents the index.swish-e files.
+
+=head1 METHODS
 
 =cut
 
@@ -45,7 +55,6 @@ ignored (always true).
 
 =cut
 
-# TODO open() with SWISH::API ??
 sub open {
     my $self = shift;
 
@@ -54,7 +63,9 @@ sub open {
     }
 
     if ( !-d $self->path ) {
-        $self->path->mkpath(1);
+
+        #carp "mkpath $self->{path}";
+        $self->path->mkpath($self->verbose);
     }
 
     1;

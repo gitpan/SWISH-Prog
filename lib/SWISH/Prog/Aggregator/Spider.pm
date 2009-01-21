@@ -14,7 +14,7 @@ use SWISH::Prog::Aggregator::Spider::UA;
 
 #use LWP::Debug qw(+);
 
-our $VERSION = '0.23';
+our $VERSION = '0.24';
 
 =pod
 

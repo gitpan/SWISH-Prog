@@ -37,6 +37,6 @@ SKIP: {
 
     ok( $prog->run('t/'), "run program" );
 
-    is( $prog->count, 5, "indexed test docs" );
+    is( $prog->count, 6, "indexed test docs" );
 
 }

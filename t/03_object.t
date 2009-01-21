@@ -5,7 +5,7 @@ use_ok('SWISH::Prog::Indexer::Native');
 SKIP: {
 
     eval "use SWISH::Prog::Aggregator::Object";
-    if ( $@ ) {
+    if ($@) {
         skip "YAML::Syck required for Object test", 15;
     }
 
@@ -50,6 +50,7 @@ SKIP: {
 
                 #debug    => 1,
                 #verbose  => 3,
+                invindex => 't/object.index',
                 warnings => 9,
 
                 #opts     => '-T indexed_words'

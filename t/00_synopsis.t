@@ -22,6 +22,9 @@ SKIP: {
 
     ok( $program->run('t/'), "run program" );
 
-    is( $program->count, 5, "indexed test docs" );
+    is( $program->count, 6, "indexed test docs" );
+
+    # clean up header so other test counts work
+    unlink('t/testindex/swish.xml') unless $ENV{PERL_DEBUG};
 
 }

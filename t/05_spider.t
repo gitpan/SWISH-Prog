@@ -2,6 +2,10 @@ use Test::More tests => 3;
 
 SKIP: {
 
+    if ( !$ENV{TEST_SPIDER} ) {
+        skip "set TEST_SPIDER env var to test the spider", 3;
+    }
+
     eval "use SWISH::Prog::Aggregator::Spider";
     if ( $@ && $@ =~ m/WWW::Mechanize/ ) {
         skip "WWW::Mechanize required for spider test", 3;
