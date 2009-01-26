@@ -85,4 +85,7 @@ Revision history for Perl extension Prog.
         * flesh out the InvIndex::Meta class, adding XML::Simple dependency
         * IMPORTANT: rename Native classes to match naming convention
  
-
+0.25    26 Jan 2009
+        * added more features to example/swish3
+        * add missing test file to MANIFEST
+        * tests clean up after themselves wrt swish.xml header files

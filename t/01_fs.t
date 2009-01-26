@@ -1,25 +1,25 @@
 use Test::More tests => 10;
 
 use_ok('SWISH::Prog');
-use_ok('SWISH::Prog::Indexer::Native');
+use_ok('SWISH::Prog::Native::Indexer');
 use_ok('SWISH::Prog::Aggregator::FS');
 use_ok('SWISH::Prog::Config');
 
 SKIP: {
 
     # is executable present?
-    my $test = SWISH::Prog::Indexer::Native->new;
+    my $test = SWISH::Prog::Native::Indexer->new;
     if ( !$test->swish_check ) {
         skip "swish-e not installed", 6;
     }
 
     ok( my $invindex
-            = SWISH::Prog::InvIndex::Native->new( path => 't/testindex', ),
+            = SWISH::Prog::Native::InvIndex->new( path => 't/testindex', ),
         "new invindex"
     );
 
     ok( my $indexer
-            = SWISH::Prog::Indexer::Native->new( invindex => $invindex, ),
+            = SWISH::Prog::Native::Indexer->new( invindex => $invindex, ),
         "new indexer"
     );
 
@@ -38,5 +38,8 @@ SKIP: {
     ok( $prog->run('t/'), "run program" );
 
     is( $prog->count, 6, "indexed test docs" );
+
+    # clean up header so other test counts work
+    unlink('t/testindex/swish.xml') unless $ENV{PERL_DEBUG};
 
 }

@@ -10,7 +10,7 @@ use SWISH::Prog::Utils;
 
 __PACKAGE__->mk_accessors(qw( db title alias_columns schema ));
 
-our $VERSION = '0.24';
+our $VERSION = '0.25';
 our $XMLer   = $SWISH::Prog::Utils::XML;
 
 =pod

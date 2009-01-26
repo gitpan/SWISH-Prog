@@ -1,6 +1,6 @@
 use Test::More tests => 15;
 
-use_ok('SWISH::Prog::Indexer::Native');
+use_ok('SWISH::Prog::Native::Indexer');
 
 SKIP: {
 
@@ -18,7 +18,7 @@ SKIP: {
     }
 
     # is executable present?
-    my $indexer = SWISH::Prog::Indexer::Native->new;
+    my $indexer = SWISH::Prog::Native::Indexer->new;
     if ( !$indexer->swish_check ) {
         skip "swish-e not installed", 14;
     }
@@ -46,7 +46,7 @@ SKIP: {
             methods => [@meth],
             title   => 'one',
             name    => 'swishobjects',
-            indexer => SWISH::Prog::Indexer::Native->new(
+            indexer => SWISH::Prog::Native::Indexer->new(
 
                 #debug    => 1,
                 #verbose  => 3,
@@ -64,5 +64,8 @@ SKIP: {
     ok( $aggregator->indexer->start, "indexer start" );
     is( $aggregator->crawl( \@obj ), 10, "crawl" );
     ok( $aggregator->indexer->finish, "indexer finish" );
+
+    # clean up header so other test counts work
+    unlink('t/object.index/swish.xml') unless $ENV{PERL_DEBUG};
 
 }

@@ -3,7 +3,7 @@ use Test::More tests => 5;
 use Carp;
 use Data::Dump qw( dump );
 
-use_ok('SWISH::Prog::Indexer::Native');
+use_ok('SWISH::Prog::Native::Indexer');
 
 # we use Rose::DBx::TestDB just for devel testing.
 # don't expect normal users to have it.
@@ -19,7 +19,7 @@ SKIP: {
     }
 
     # is executable present?
-    my $indexer = SWISH::Prog::Indexer::Native->new;
+    my $indexer = SWISH::Prog::Native::Indexer->new;
     if ( !$indexer->swish_check ) {
         skip "swish-e not installed", 4;
     }
@@ -50,7 +50,7 @@ SKIP: {
     # index it
     ok( my $aggr = SWISH::Prog::Aggregator::DBI->new(
             db      => $dbh,
-            indexer => SWISH::Prog::Indexer::Native->new(
+            indexer => SWISH::Prog::Native::Indexer->new(
                 invindex => 't/dbi_index',
             ),
             schema => {
@@ -70,5 +70,8 @@ SKIP: {
     is( $aggr->crawl(), 1, "row data indexed" );
 
     ok( $aggr->indexer->finish, "indexer finished" );
+
+    # clean up header so other test counts work
+    unlink('t/dbi_index/swish.xml') unless $ENV{PERL_DEBUG};
 
 }

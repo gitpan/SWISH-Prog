@@ -1,6 +1,6 @@
 use Test::More tests => 5;
 
-use_ok('SWISH::Prog::Indexer::Native');
+use_ok('SWISH::Prog::Native::Indexer');
 
 SKIP: {
 
@@ -10,7 +10,7 @@ SKIP: {
     }
 
     # is executable present?
-    my $indexer = SWISH::Prog::Indexer::Native->new;
+    my $indexer = SWISH::Prog::Native::Indexer->new;
     if ( !$indexer->swish_check ) {
         skip "swish-e not installed", 4;
     }
@@ -21,7 +21,7 @@ SKIP: {
     mkdir('t/maildir/new');
 
     ok( my $mail = SWISH::Prog::Aggregator::Mail->new(
-            indexer => SWISH::Prog::Indexer::Native->new(),
+            indexer => SWISH::Prog::Native::Indexer->new(),
             verbose => $ENV{PERL_DEBUG},
         ),
         "new mail aggregator"

@@ -11,16 +11,16 @@ SKIP: {
         skip "WWW::Mechanize required for spider test", 3;
     }
 
-    use_ok('SWISH::Prog::Indexer::Native');
+    use_ok('SWISH::Prog::Native::Indexer');
 
     # is executable present?
-    my $indexer = SWISH::Prog::Indexer::Native->new;
+    my $indexer = SWISH::Prog::Native::Indexer->new;
     if ( !$indexer->swish_check ) {
         skip "swish-e not installed", 2;
     }
 
     ok( my $spider = SWISH::Prog::Aggregator::Spider->new(
-            indexer   => SWISH::Prog::Indexer::Native->new,
+            indexer   => SWISH::Prog::Native::Indexer->new,
             verbose   => $ENV{PERL_DEBUG},
             max_depth => 2,
             delay     => 1,
