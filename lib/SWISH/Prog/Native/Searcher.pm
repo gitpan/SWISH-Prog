@@ -9,7 +9,7 @@ use SWISH::Prog::Native::Result;
 
 __PACKAGE__->mk_accessors(qw( swish sao_opts result_class ));
 
-our $VERSION = '0.25';
+our $VERSION = '0.26';
 
 =head1 NAME
 

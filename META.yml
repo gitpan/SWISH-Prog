@@ -1,28 +1,34 @@
 --- #YAML:1.0
-name:                SWISH-Prog
-version:             0.25
-abstract:            information retrieval application framework
-license:             ~
-author:              
+name:               SWISH-Prog
+version:            0.26
+abstract:           information retrieval application framework
+author:
     - Peter Karman <karman@cpan.org>
-generated_by:        ExtUtils::MakeMaker version 6.42
-distribution_type:   module
-requires:     
-    Class::Accessor::Fast:         0
-    Config::General:               2.31
-    Data::Dump:                    0
-    File::Basename:                0
-    File::Slurp:                   0
-    File::Temp:                    0
-    MIME::Types:                   0
-    Path::Class:                   0
-    Scalar::Util:                  0
-    Search::QueryParser::SQL:      0
-    Search::Tools:                 0.16
-    SWISH::API::Object:            0.12
-    SWISH::Filter:                 0.09
-    Test::More:                    0
-    XML::Simple:                   0
+license:            unknown
+distribution_type:  module
+configure_requires:
+    ExtUtils::MakeMaker:  0
+requires:
+    Class::Accessor::Fast:  0
+    Config::General:      2.31
+    Data::Dump:           0
+    File::Basename:       0
+    File::Slurp:          0
+    File::Temp:           0
+    MIME::Types:          0
+    Path::Class:          0
+    Scalar::Util:         0
+    Search::QueryParser::SQL:  0
+    Search::Tools:        0.16
+    SWISH::API::Object:   0.12
+    SWISH::Filter:        0.09
+    Test::More:           0
+    XML::Simple:          0
+no_index:
+    directory:
+        - t
+        - inc
+generated_by:       ExtUtils::MakeMaker version 6.46
 meta-spec:
-    url:     http://module-build.sourceforge.net/META-spec-v1.3.html
-    version: 1.3
+    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
+    version:  1.4

@@ -10,7 +10,7 @@ use Scalar::Util qw( blessed );
 use SWISH::Prog::Config;
 use SWISH::Prog::InvIndex;
 
-our $VERSION = '0.25';
+our $VERSION = '0.26';
 
 __PACKAGE__->mk_accessors(qw( aggregator ));
 

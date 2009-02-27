@@ -89,3 +89,7 @@ Revision history for Perl extension Prog.
         * added more features to example/swish3
         * add missing test file to MANIFEST
         * tests clean up after themselves wrt swish.xml header files
+
+0.26    26 Feb 2009
+        * fix off-by-one error in skip test count in t/03-object.t
+

@@ -6,7 +6,7 @@ SKIP: {
 
     eval "use SWISH::Prog::Aggregator::Object";
     if ($@) {
-        skip "YAML::Syck required for Object test", 15;
+        skip "YAML::Syck required for Object test", 14;
     }
 
     my @meth = qw( one two three );
