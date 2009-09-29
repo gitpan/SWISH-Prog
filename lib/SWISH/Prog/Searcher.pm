@@ -6,7 +6,7 @@ use Carp;
 use Scalar::Util qw( blessed );
 use SWISH::Prog::QueryParser;
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 __PACKAGE__->mk_accessors(
     qw(
@@ -48,8 +48,34 @@ returning results from a SWISH::Prog::InvIndex.
 
 =head1 METHODS
 
-
 =head2 init
+
+Overrides base method.
+
+=head2 config
+
+A SWISH::Prog::Config object. Required. Set in new().
+
+=head2 invindex
+
+A SWISH::Prog::InvIndex object or directory path. Required. Set in new().
+
+=head2 max_hits
+
+The maximum number of hits to return. Optional. Default is 1000.
+
+=head2 query_class
+
+Default is C<SWISH::Prog::Query>.
+
+=head2 query_parser
+
+A SWISH::Prog::QueryParser object. Optional. Set in new().
+
+=head2 sort_order
+
+The order in which Results will be sorted. Default is descending
+by C<swishrank>.
 
 =cut
 
@@ -66,7 +92,7 @@ sub init {
     }
     if ( !blessed( $self->{invindex} ) ) {
 
-        # assume a InvIndex in the same base class as $self
+        # assume a InvIndex in the same namespace as $self
         my $class = ref($self);
         $class =~ s/::Searcher$/::InvIndex/;
         $self->{invindex}
@@ -89,7 +115,7 @@ sub init {
         config      => $self->{config},
     );
 
-    $self->{max_hits} ||= 100;
+    $self->{max_hits} ||= 1000;
 
     return $self;
 }
@@ -155,12 +181,49 @@ __END__
 
 Peter Karman, E<lt>perl@peknet.comE<gt>
 
+=head1 BUGS
+
+Please report any bugs or feature requests to C<bug-swish-prog at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=SWISH-Prog>.  
+I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc SWISH::Prog
+
+
+You can also look for information at:
+
+=over 4
+
+=item * RT: CPAN's request tracker
+
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=SWISH-Prog>
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/SWISH-Prog>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/d/SWISH-Prog>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/SWISH-Prog/>
+
+=back
+
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2008 by Peter Karman
+Copyright 2008-2009 by Peter Karman
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
+it under the same terms as Perl itself. 
 
+=head1 SEE ALSO
 
-=cut
+L<http://swish-e.org/>

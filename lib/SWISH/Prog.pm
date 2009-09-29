@@ -1,6 +1,5 @@
 package SWISH::Prog;
-
-use 5.008_003;
+use 5.008003;
 use strict;
 use warnings;
 use base qw( SWISH::Prog::Class );
@@ -10,7 +9,7 @@ use Scalar::Util qw( blessed );
 use SWISH::Prog::Config;
 use SWISH::Prog::InvIndex;
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 __PACKAGE__->mk_accessors(qw( aggregator ));
 
@@ -26,11 +25,11 @@ SWISH::Prog - information retrieval application framework
 
   use SWISH::Prog;
   my $program = SWISH::Prog->new(
-                invindex    => 'path/to/myindex',
-                aggregator  => 'fs',
-                indexer     => 'native',
-                config      => 'some/swish/config/file',
-                filter      => sub { print $_[0]->url . "\n" },
+    invindex    => 'path/to/myindex',
+    aggregator  => 'fs',
+    indexer     => 'native',
+    config      => 'some/swish/config/file',
+    filter      => sub { print $_[0]->url . "\n" },
   );
                 
   $program->run('some/dir');
@@ -81,6 +80,7 @@ my %ishort = (
 
 sub init {
     my $self = shift;
+    $self->SUPER::init(@_);
 
     # search mode requires only invindex
     if ( $self->{query} && !$self->{indexer} && !$self->{aggregator} ) {
@@ -167,6 +167,10 @@ sub init {
     $self->{aggregator} = $aggregator;
 }
 
+=head2 aggregator( I<$swish_prog_aggregator> )
+
+Get the SWISH::Prog::Aggregator object. You should set this in new().
+
 =head2 run( I<collection> )
 
 Execute the program. This is an alias for index().
@@ -249,9 +253,55 @@ sub count {
 }
 
 1;
+
 __END__
 
+=head1 AUTHOR
 
+Peter Karman, E<lt>perl@peknet.comE<gt>
+
+=head1 BUGS
+
+Please report any bugs or feature requests to C<bug-swish-prog at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=SWISH-Prog>.  
+I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc SWISH::Prog
+
+
+You can also look for information at:
+
+=over 4
+
+=item * RT: CPAN's request tracker
+
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=SWISH-Prog>
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/SWISH-Prog>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/d/SWISH-Prog>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/SWISH-Prog/>
+
+=back
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2008-2009 by Peter Karman
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
 
 =head1 SEE ALSO
 
@@ -264,15 +314,3 @@ SWISH::Prog::InvIndex,
 SWISH::Prog::Utils,
 SWISH::Prog::Aggregator,
 SWISH::Prog::Config
-
-
-=head1 AUTHOR
-
-Peter Karman, E<lt>perl@peknet.comE<gt>
-
-=head1 COPYRIGHT AND LICENSE
-
-Copyright 2008 by Peter Karman
-
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself. 

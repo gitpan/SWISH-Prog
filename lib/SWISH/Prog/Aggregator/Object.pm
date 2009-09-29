@@ -11,10 +11,11 @@ use SWISH::Prog::Utils;
 use Scalar::Util qw( blessed );
 
 __PACKAGE__->mk_accessors(
-    qw( methods class title url modtime class_meta serial_format ));
+    qw( methods class title url modtime serial_format ));
 
-our $VERSION = '0.26';
-our $XMLer   = $SWISH::Prog::Utils::XML;
+our $VERSION = '0.27';
+
+my $XMLer = Search::Tools::XML->new();    # included in Utils
 
 =pod
 
@@ -129,7 +130,7 @@ sub init {
     $self->{title}         ||= 'title';
     $self->{url}           ||= 'url';
     $self->{modtime}       ||= 'modtime';
-    $self->{serial_format} ||= 'json'; 
+    $self->{serial_format} ||= 'json';
 
     unless ( $self->{methods} ) {
         croak "methods required";
@@ -139,7 +140,7 @@ sub init {
     my $config = $self->{indexer}->{config};
 
     ( my $class_meta = $self->class ) =~ s/\W/\./g;
-    $self->class_meta($class_meta);
+    $self->{_class_meta} = $class_meta;
 
     # make urls find-able (really should adjust WordCharacters too...)
     $config->MaxWordLimit(256) unless $config->MaxWordLimit;
@@ -244,7 +245,7 @@ sub get_doc {
         ? $object->$modtimemeth
         : time();
 
-    my $xml = $self->_obj2xml( $self->class_meta, $object, $title );
+    my $xml = $self->_obj2xml( $self->{_class_meta}, $object, $title );
 
     my $doc = $self->doc_class->new(
         content => $xml,
@@ -328,22 +329,53 @@ __END__
 
 L<SWISH::Prog>, L<YAML::Syck>, L<JSON::Syck>
 
-=head1 SEE ALSO
-
-L<http://swish-e.org/docs/>
-
-L<SWISH::Prog>, L<SWISH::API:Object>
-
-
 =head1 AUTHOR
 
 Peter Karman, E<lt>perl@peknet.comE<gt>
 
+=head1 BUGS
+
+Please report any bugs or feature requests to C<bug-swish-prog at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=SWISH-Prog>.  
+I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc SWISH::Prog
+
+
+You can also look for information at:
+
+=over 4
+
+=item * RT: CPAN's request tracker
+
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=SWISH-Prog>
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/SWISH-Prog>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/d/SWISH-Prog>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/SWISH-Prog/>
+
+=back
+
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2008 by Peter Karman
+Copyright 2008-2009 by Peter Karman
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
 
-=cut
+=head1 SEE ALSO
+
+L<http://swish-e.org/>

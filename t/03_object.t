@@ -1,12 +1,20 @@
+use strict;
+use warnings;
 use Test::More tests => 15;
 
 use_ok('SWISH::Prog::Native::Indexer');
 
 SKIP: {
 
+    eval "use YAML::Syck";
+    if ($@) {
+        diag "install YAML::Syck to test Object aggregator";
+        skip "YAML::Syck required for Object test", 14;
+    }
     eval "use SWISH::Prog::Aggregator::Object";
     if ($@) {
-        skip "YAML::Syck required for Object test", 14;
+        diag "missing installed module: $@";
+        skip $@, 14;
     }
 
     my @meth = qw( one two three );

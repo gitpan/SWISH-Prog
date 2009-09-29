@@ -93,3 +93,11 @@ Revision history for Perl extension Prog.
 0.26    26 Feb 2009
         * fix off-by-one error in skip test count in t/03-object.t
 
+0.27    28 Sep 2009
+        * make QueryParser and Query part of the official install,
+          even though there are still TODO items
+        * add all_metanames() method to Config
+        * refactor to use Search::Tools and Rose::ObjectX::CAF
+          instead of Class::Accessor::Fast
+
+

@@ -1,3 +1,5 @@
+use strict;
+use warnings;
 use Test::More tests => 5;
 
 use Carp;
@@ -15,6 +17,7 @@ SKIP: {
 
     eval "use Rose::DBx::TestDB";
     if ($@) {
+        diag "install Rose::DBx::TestDB to test the DBI aggregator";
         skip "Rose::DBx::TestDB not installed", 4;
     }
 

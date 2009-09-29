@@ -1,3 +1,5 @@
+use strict;
+use warnings;
 use Test::More tests => 5;
 
 use_ok('SWISH::Prog::Native::Indexer');
@@ -6,6 +8,7 @@ SKIP: {
 
     eval "use SWISH::Prog::Aggregator::Mail";
     if ($@) {
+        diag "install Mail::Box to test Mail aggregator";
         skip "mail test requires Mail::Box", 4;
     }
 

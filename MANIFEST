@@ -20,6 +20,9 @@ lib/SWISH/Prog/Aggregator/Object.pm
 lib/SWISH/Prog/Aggregator/Mail.pm
 lib/SWISH/Prog/Searcher.pm
 lib/SWISH/Prog/Results.pm
+lib/SWISH/Prog/Result.pm
+lib/SWISH/Prog/QueryParser.pm
+lib/SWISH/Prog/Query.pm
 examples/swishagr
 README
 t/01_fs.t
@@ -40,6 +43,8 @@ lib/SWISH/Prog/Queue.pm
 lib/SWISH/Prog/Utils.pm
 t/00_synopsis.t
 t/06_config.t
+t/07_queryparser.t
+t/08_meta.t
 t/maildir/.INBOX/cur/1201404060.V802I5f9e4M893922.louvin.peknet.com:2,
 t/test.conf
 t/test.pdf

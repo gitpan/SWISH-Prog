@@ -1,27 +1,32 @@
 package SWISH::Prog::Doc;
-
 use strict;
 use warnings;
 use Carp;
 use base qw( SWISH::Prog::Class );
-
-use POSIX qw(locale_h);
-use locale;
-
 use overload(
     '""'     => \&as_string,
+    'bool'   => sub {1},
     fallback => 1,
 );
 
 use SWISH::Prog::Headers;
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
-my @Attr = qw( url modtime type parser content action size charset data );
-__PACKAGE__->mk_accessors(@Attr);
-my $locale = setlocale(LC_CTYPE);
-my ( $lang, $charset ) = split( m/\./, $locale );
-$charset ||= 'iso-8859-1';
+__PACKAGE__->mk_accessors(
+    qw( url modtime type parser content action size charset data ));
+
+my ( $locale, $lang, $charset );
+{
+
+    # inside a block to reduce impact on any regex
+    use POSIX qw(locale_h);
+    use locale;
+
+    $locale = setlocale(LC_CTYPE);
+    ( $lang, $charset ) = split( m/\./, $locale );
+    $charset ||= 'iso-8859-1';
+}
 
 =pod
 
@@ -93,6 +98,8 @@ All of the following params are also available as accessors/mutators.
 
 =item charset
 
+=item data
+
 =back
 
 =cut
@@ -105,6 +112,7 @@ Calls filter() on object.
 
 sub init {
     my $self = shift;
+    $self->SUPER::init(@_);
     $self->{charset} ||= $charset;
     $self->filter();
     return $self;
@@ -159,25 +167,53 @@ sub as_string {
 
 __END__
 
-
-=pod
-
-
-=head1 SEE ALSO
-
-L<http://swish-e.org/docs/>
-
-SWISH::Prog::Headers
-
 =head1 AUTHOR
 
 Peter Karman, E<lt>perl@peknet.comE<gt>
 
+=head1 BUGS
+
+Please report any bugs or feature requests to C<bug-swish-prog at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=SWISH-Prog>.  
+I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc SWISH::Prog
+
+
+You can also look for information at:
+
+=over 4
+
+=item * RT: CPAN's request tracker
+
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=SWISH-Prog>
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/SWISH-Prog>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/d/SWISH-Prog>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/SWISH-Prog/>
+
+=back
+
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2008 by Peter Karman
+Copyright 2008-2009 by Peter Karman
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
 
-=cut
+=head1 SEE ALSO
+
+L<http://swish-e.org/>

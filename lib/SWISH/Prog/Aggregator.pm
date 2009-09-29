@@ -8,7 +8,11 @@ use SWISH::Filter;
 use SWISH::Prog::Doc;
 use Scalar::Util qw( blessed );
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
+
+__PACKAGE__->mk_accessors(
+    qw( set_parser_from_type indexer doc_class swish_filter_obj ));
+__PACKAGE__->mk_ro_accessors(qw( config count ));
 
 =pod
 
@@ -53,12 +57,6 @@ of aggregators that crawl the filesystem and web, respectively.
 
 =head1 METHODS
 
-=cut
-
-__PACKAGE__->mk_accessors(
-    qw( set_parser_from_type indexer doc_class swish_filter_obj ));
-__PACKAGE__->mk_ro_accessors(qw( config count ));
-
 =head2 init
 
 Set object flags per SWISH::Prog::Class API. These are also accessors, 
@@ -79,6 +77,10 @@ A SWISH::Prog::Indexer object.
 
 The name of the SWISH::Prog::Doc-derived class to use in get_doc().
 Default is SWISH::Prog::Doc.
+
+=item swish_filter_obj
+
+A SWISH::Filter object. If not passed in new() one is created for you.
 
 =back
 
@@ -103,7 +105,7 @@ sub init {
         croak "SWISH::Prog::Config-derived object required";
     }
 
-    $self->{doc_class}        ||= 'SWISH::Prog::Doc';
+    $self->{doc_class} ||= 'SWISH::Prog::Doc';
     $self->{swish_filter_obj} ||= SWISH::Filter->new;
 
     if ( $self->{filter} ) {
@@ -234,11 +236,49 @@ __END__
 
 Peter Karman, E<lt>perl@peknet.comE<gt>
 
+=head1 BUGS
+
+Please report any bugs or feature requests to C<bug-swish-prog at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=SWISH-Prog>.  
+I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc SWISH::Prog
+
+
+You can also look for information at:
+
+=over 4
+
+=item * RT: CPAN's request tracker
+
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=SWISH-Prog>
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/SWISH-Prog>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/d/SWISH-Prog>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/SWISH-Prog/>
+
+=back
+
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2008 by Peter Karman
+Copyright 2008-2009 by Peter Karman
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
 
-=cut
+=head1 SEE ALSO
+
+L<http://swish-e.org/>

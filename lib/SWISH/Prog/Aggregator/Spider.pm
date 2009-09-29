@@ -3,18 +3,24 @@ use strict;
 use warnings;
 use base qw( SWISH::Prog::Aggregator );
 use Carp;
-__PACKAGE__->mk_accessors(
-    qw( use_md5 uri_cache md5_cache queue ua max_depth delay timeout ));
-__PACKAGE__->mk_ro_accessors(qw( current_depth base ));
 use Scalar::Util qw( blessed );
 use URI;
+use SWISH::Prog::Utils;
 use SWISH::Prog::Queue;
 use SWISH::Prog::Cache;
 use SWISH::Prog::Aggregator::Spider::UA;
 
+__PACKAGE__->mk_accessors(
+    qw( use_md5 uri_cache md5_cache queue ua max_depth delay timeout ));
+
 #use LWP::Debug qw(+);
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
+
+# TODO make these configurable
+my %parser_types = %SWISH::Prog::Utils::ParserTypes;
+my $default_ext  = $SWISH::Prog::Utils::ExtRE;
+my $utils        = 'SWISH::Prog::Utils';
 
 =pod
 
@@ -85,6 +91,11 @@ of links from the first argument passed to I<crawl>.
 Get/set the number of seconds to wait between making requests. Default is
 5 seconds (a very friendly delay).
 
+=item timeout
+
+Get/set the number of seconds to wait before considering the remote
+server unresponsive. The default is 10.
+
 =back
 
 =head2 init
@@ -108,14 +119,15 @@ sub init {
 
     $self->{queue}     ||= SWISH::Prog::Queue->new;
     $self->{uri_cache} ||= SWISH::Prog::Cache->new;
-    $self->{_auth_cache} = SWISH::Prog::Cache->new;    # ALWAYS inmemory cache
+    $self->{_uri_ok_cache} = SWISH::Prog::Cache->new;
+    $self->{_auth_cache}   = SWISH::Prog::Cache->new;  # ALWAYS inmemory cache
     $self->{ua}
         ||= SWISH::Prog::Aggregator::Spider::UA->new( stack_depth => 0 );
 
     $self->{timeout} = 10 unless defined $self->{timeout};
     $self->{ua}->timeout( $self->{timeout} );
 
-    $self->{current_depth} ||= 1;
+    $self->{_current_depth} = 1;
 
     if ( $self->{use_md5} ) {
         eval "require Digest::MD5" or croak $@;
@@ -137,11 +149,22 @@ sub uri_ok {
     my $self = shift;
     my $uri  = shift or croak "URI required";
     my $str  = $uri->canonical->as_string;
+    return 0 if $self->{_uri_ok_cache}->has($str);
+    $self->{_uri_ok_cache}->add($str);
 
     #warn "uri_ok: $str\n";
 
     # check base
-    if ( $uri->rel( $self->{base} ) eq $uri ) {
+    if ( $uri->rel( $self->{_base} ) eq $uri ) {
+        return 0;
+    }
+
+    my $path = $uri->path;
+    my $mime = $utils->mime_type($path);
+
+    if ( !exists $parser_types{$mime} ) {
+
+        #warn "no parser for $mime";
         return 0;
     }
 
@@ -157,7 +180,7 @@ sub _add_links {
 
     # calc depth
     if ( !$self->{_parent} || $self->{_parent} ne $parent ) {
-        $self->{current_depth}++;
+        $self->{_current_depth}++;
     }
 
     $self->{_parent} ||= $parent;    # first time.
@@ -166,9 +189,9 @@ sub _add_links {
         my $uri = $l->url_abs or next;
 
         next if $self->uri_cache->has($uri);    # check only once
+        $self->uri_cache->add( $uri => $self->{_current_depth} );
 
         if ( $self->uri_ok($uri) ) {
-            $self->uri_cache->add( $uri => $self->current_depth );
             $self->queue->put($uri);
         }
     }
@@ -369,6 +392,10 @@ sub get_doc {
 
     if ( $ua->success ) {
 
+        my $content_type = $meta->{ct};
+        if ( !exists $parser_types{$content_type} ) {
+            warn "no parser for $content_type";
+        }
         my $charset = $headers->content_type;
         $charset =~ s/;?$meta->{ct};?//;
         my %doc = (
@@ -415,7 +442,7 @@ sub crawl {
         my $uri = URI->new($url);
         $self->uri_cache->add( $uri => 1 );
         $self->queue->put($uri);
-        $self->{base} = $uri->canonical->as_string;
+        $self->{_base} = $uri->canonical->as_string;
         while ( my $doc = $self->get_doc ) {
             next unless blessed($doc);
             $self->{count}++;
@@ -434,11 +461,49 @@ __END__
 
 Peter Karman, E<lt>perl@peknet.comE<gt>
 
+=head1 BUGS
+
+Please report any bugs or feature requests to C<bug-swish-prog at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=SWISH-Prog>.  
+I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc SWISH::Prog
+
+
+You can also look for information at:
+
+=over 4
+
+=item * RT: CPAN's request tracker
+
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=SWISH-Prog>
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/SWISH-Prog>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/d/SWISH-Prog>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/SWISH-Prog/>
+
+=back
+
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2008 by Peter Karman
+Copyright 2008-2009 by Peter Karman
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
 
-=cut
+=head1 SEE ALSO
+
+L<http://swish-e.org/>

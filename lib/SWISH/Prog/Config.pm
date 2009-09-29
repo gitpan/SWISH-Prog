@@ -10,10 +10,11 @@ use Search::Tools::XML;
 use Path::Class qw();    # we have our own file() method
 use overload(
     '""'     => \&stringify,
+    bool     => sub {1},
     fallback => 1,
 );
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 our $XMLer = Search::Tools::XML->new;
 
@@ -126,11 +127,11 @@ SWISH::Prog::Config - read/write Swish-e config files
  
 =head1 DESCRIPTION
 
-The SWISH::Prog::Config class is intended to be accessed via SWISH::Prog new().
+The SWISH::Prog::Config class is intended to be accessed via SWISH::Prog->new().
 
 See the Swish-e documentation for a list of configuration parameters.
 Each parameter has an accessor/mutator method as part of the Config object.
-Some preliminary compatability is offered for Swish::Config
+Some preliminary compatability is offered for SWISH::3::Config
 with XML format config files.
 
 B<NOTE:> Every config parameter can take either a scalar or an array ref as a value.
@@ -362,6 +363,28 @@ sub as_hash {
     return { $c->getall };
 }
 
+=head2 all_metanames
+
+Returns array ref of all MetaNames, regardless of whether they
+are declared as MetaNames, MetaNamesRank or MetaNameAlias config
+options.
+
+=cut
+
+sub all_metanames {
+    my $self = shift;
+    my @meta = @{ $self->MetaNames };
+    for my $line ( @{ $self->MetaNamesRank || [] } ) {
+        my ( $bias, @list ) = split( m/\ +/, $line );
+        push( @meta, @list );
+    }
+    for my $line ( @{ $self->MetaNameAlias || [] } ) {
+        my ( $orig, @alias ) = split( m/\ +/, $line );
+        push( @meta, @alias );
+    }
+    return \@meta;
+}
+
 =head2 stringify
 
 Returns object as version 2 formatted scalar.
@@ -501,19 +524,53 @@ which is B<not> the default in Swish-e.
 This is to make the RankScheme feature work by default. 
 Really, the default should be 0 in Swish-e itself.
 
-=head1 SEE ALSO
-
-SWISH::Prog, SWISH::Parser
-
 =head1 AUTHOR
 
 Peter Karman, E<lt>perl@peknet.comE<gt>
 
+=head1 BUGS
+
+Please report any bugs or feature requests to C<bug-swish-prog at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=SWISH-Prog>.  
+I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc SWISH::Prog
+
+
+You can also look for information at:
+
+=over 4
+
+=item * RT: CPAN's request tracker
+
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=SWISH-Prog>
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/SWISH-Prog>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/d/SWISH-Prog>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/SWISH-Prog/>
+
+=back
+
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2006 by Peter Karman
+Copyright 2006-2009 by Peter Karman
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
 
-=cut
+=head1 SEE ALSO
+
+L<http://swish-e.org/>

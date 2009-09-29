@@ -1,55 +1,38 @@
-package SWISH::Prog::Results;
+package SWISH::Prog::Query;
 use strict;
 use warnings;
-use base qw( SWISH::Prog::Class );
+use base qw( Search::Tools::Query );
 use Carp;
 
 our $VERSION = '0.27';
 
-__PACKAGE__->mk_accessors(
-    qw(
-        hits
-        ),
-);
-
 =head1 NAME
 
-SWISH::Prog::Results - base results class
+SWISH::Prog::Query - a Query object base class
 
 =head1 SYNOPSIS
 
- my $searcher = SWISH::Prog::Searcher->new(
-                    invindex        => 'path/to/index',
-                    query_class     => 'SWISH::Prog::Query',
-                    query_parser    => $swish_prog_queryparser,
-                );
-                
- my $results = $searcher->search( 'foo bar' );
- while (my $result = $results->next) {
-     printf("%4d %s\n", $result->score, $result->uri);
- }
+ my $parser = SWISH::Prog::QueryParser->new(
+        charset         => 'iso-8859-1',
+        phrase_delim    => '"',
+        and_word        => 'and',
+        or_word         => 'or',
+        not_word        => 'not',
+        wildcard        => '*',
+        stopwords       => [],
+        ignore_case     => 1,
+        query_class     => 'SWISH::Prog::Query',
+    );
+ my $query = $parser->parse( 'foo not bar or bing' );
 
 =head1 DESCRIPTION
 
-SWISH::Prog::Results is a base results class. It defines
-the APIs that all SWISH::Prog storage backends adhere to in
-returning results from a SWISH::Prog::InvIndex.
+SWISH::Prog::Query is a base class representing a query.
+You create Query objects and pass them to a Searcher.
 
 =head1 METHODS
 
-=head2 hits
-
-Returns the number of matching documents for the query.
-
-=head2 next
-
-Return the next Result.
-
 =cut
-
-sub next {
-    croak "must override next() in your subclass";
-}
 
 1;
 

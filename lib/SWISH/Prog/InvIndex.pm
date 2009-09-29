@@ -4,15 +4,16 @@ use strict;
 use warnings;
 use base qw( SWISH::Prog::Class );
 use Carp;
-use Path::Class;
+use Path::Class qw();   # do not import file() and dir()
 use Scalar::Util qw( blessed );
 use SWISH::Prog::InvIndex::Meta;
 use overload(
     '""'     => sub { shift->path },
+    'bool'   => sub {1},
     fallback => 1,
 );
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 __PACKAGE__->mk_accessors(qw( path clobber ));
 
@@ -21,7 +22,7 @@ sub init {
     my $path = $self->{path} || $self->{invindex} || 'index.swish';
 
     unless ( blessed($path) && $path->isa('Path::Class::Dir') ) {
-        $self->path( dir($path) );
+        $self->path( Path::Class::dir($path) );
     }
 
     $self->{clobber} = 0 unless exists $self->{clobber};
@@ -80,7 +81,9 @@ sub meta {
     return SWISH::Prog::InvIndex::Meta->new( invindex => $self );
 }
 
-=pod
+1;
+
+__END__
 
 =head1 NAME
 
@@ -146,23 +149,53 @@ any existing index with the same name. The default is true.
 Returns a new instance like new() does, blessed into the appropriate
 class indicated by the C<swish.xml> meta header file.
 
-=cut
-
-1;
-
-__END__
-
-
 =head1 AUTHOR
 
 Peter Karman, E<lt>perl@peknet.comE<gt>
 
+=head1 BUGS
+
+Please report any bugs or feature requests to C<bug-swish-prog at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=SWISH-Prog>.  
+I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc SWISH::Prog
+
+
+You can also look for information at:
+
+=over 4
+
+=item * RT: CPAN's request tracker
+
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=SWISH-Prog>
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/SWISH-Prog>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/d/SWISH-Prog>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/SWISH-Prog/>
+
+=back
+
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2008 by Peter Karman
+Copyright 2008-2009 by Peter Karman
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
 
-=cut
+=head1 SEE ALSO
 
+L<http://swish-e.org/>

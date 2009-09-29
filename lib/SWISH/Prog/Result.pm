@@ -1,4 +1,4 @@
-package SWISH::Prog::Results;
+package SWISH::Prog::Result;
 use strict;
 use warnings;
 use base qw( SWISH::Prog::Class );
@@ -6,23 +6,13 @@ use Carp;
 
 our $VERSION = '0.27';
 
-__PACKAGE__->mk_accessors(
-    qw(
-        hits
-        ),
-);
+__PACKAGE__->mk_accessors(qw( doc score ));
 
 =head1 NAME
 
-SWISH::Prog::Results - base results class
+SWISH::Prog::Result - base result class
 
 =head1 SYNOPSIS
-
- my $searcher = SWISH::Prog::Searcher->new(
-                    invindex        => 'path/to/index',
-                    query_class     => 'SWISH::Prog::Query',
-                    query_parser    => $swish_prog_queryparser,
-                );
                 
  my $results = $searcher->search( 'foo bar' );
  while (my $result = $results->next) {
@@ -37,19 +27,52 @@ returning results from a SWISH::Prog::InvIndex.
 
 =head1 METHODS
 
-=head2 hits
+The following methods are all accessors (getters) only.
 
-Returns the number of matching documents for the query.
+=head2 doc
 
-=head2 next
+Returns a SWISH::Prog::Doc instance.
 
-Return the next Result.
+=head2 score
+
+Returns the ranking score for the Result.
+
+=head2 uri
+
+=head2 mtime
+
+=head2 title
+
+=head2 summary
+
+=head2 swishdocpath
+
+Alias for uri().
+
+=head2 swishlastmodified
+
+Alias for mtime().
+
+=head2 swishtitle
+
+Alias for title().
+
+=head2 swishdescription
+
+Alias for summary().
 
 =cut
 
-sub next {
-    croak "must override next() in your subclass";
-}
+sub uri     { croak "must implement uri" }
+sub mtime   { croak "must implement mtime" }
+sub title   { croak "must implement title" }
+sub summary { croak "must implement summary" }
+
+# version 2 names for the faithful
+*swishdocpath      = \&uri;
+*swishlastmodified = \&mtime;
+*swishtitle        = \&title;
+*swishdescription  = \&summary;
 
 1;
 

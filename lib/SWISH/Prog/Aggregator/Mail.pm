@@ -8,8 +8,9 @@ use Search::Tools::XML;
 use Mail::Box::Manager;
 use base qw( SWISH::Prog::Aggregator );
 
-our $VERSION = '0.26';
-our $XMLer   = Search::Tools::XML->new;
+our $VERSION = '0.27';
+
+my $XMLer = Search::Tools::XML->new();
 
 =pod
 
@@ -113,7 +114,7 @@ sub crawl {
 }
 
 sub _addresses {
-    return join( ', ', map { $_->format } @_ );
+    return join( ', ', map { ref($_) ? $_->format : $_ } @_ );
 }
 
 sub _process_folder {
@@ -148,7 +149,7 @@ sub _filter_attachment {
 
     my $type     = $attm->body->mimeType->type;
     my $filename = $attm->body->dispositionFilename;
-    my $content  = $attm->decoded;
+    my $content  = $attm->decoded . '';  # force stringify
 
     if ( $self->swish_filter_obj->can_filter($type) ) {
 
@@ -187,6 +188,7 @@ sub get_doc {
     my $folder  = shift or croak "folder required";
     my $message = shift or croak "mail meta required";
 
+    # >head->createFromLine;
     my %meta = (
         url => join( '.', $folder, $message->messageId ),
         id  => $message->messageId,
@@ -265,24 +267,53 @@ sub _mail2xml {
 
 __END__
 
-=head1 SEE ALSO
-
-L<http://swish-e.org/docs/>
-
-SWISH::Prog, Search::Tools
-
-
 =head1 AUTHOR
 
 Peter Karman, E<lt>perl@peknet.comE<gt>
 
-Thanks to rjbs and confound on #email at irc.perl.org for suggestions.
+=head1 BUGS
+
+Please report any bugs or feature requests to C<bug-swish-prog at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=SWISH-Prog>.  
+I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc SWISH::Prog
+
+
+You can also look for information at:
+
+=over 4
+
+=item * RT: CPAN's request tracker
+
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=SWISH-Prog>
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/SWISH-Prog>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/d/SWISH-Prog>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/SWISH-Prog/>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2008 by Peter Karman
+Copyright 2008-2009 by Peter Karman
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
 
-=cut
+=head1 SEE ALSO
+
+L<http://swish-e.org/>
