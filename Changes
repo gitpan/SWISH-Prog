@@ -100,4 +100,6 @@ Revision history for Perl extension Prog.
         * refactor to use Search::Tools and Rose::ObjectX::CAF
           instead of Class::Accessor::Fast
 
+0.28   30 Sept 2009
+        * add some missing calls to SUPER::init()
 

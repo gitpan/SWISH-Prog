@@ -8,7 +8,7 @@ use SWISH::Prog::Native::InvIndex;
 use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 
-our $VERSION = '0.27';
+our $VERSION = '0.28';
 
 my $invindex_class = 'SWISH::Prog::Native::InvIndex';
 
@@ -84,6 +84,7 @@ Initialize object. Called by new().
 
 sub init {
     my $self = shift;
+    $self->SUPER::init(@_);
 
     # default config
     $self->{config} ||= SWISH::Prog::Config->new;

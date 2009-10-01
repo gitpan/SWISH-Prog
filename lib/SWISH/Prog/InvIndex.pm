@@ -13,12 +13,13 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.27';
+our $VERSION = '0.28';
 
 __PACKAGE__->mk_accessors(qw( path clobber ));
 
 sub init {
     my $self = shift;
+    $self->SUPER::init(@_);
     my $path = $self->{path} || $self->{invindex} || 'index.swish';
 
     unless ( blessed($path) && $path->isa('Path::Class::Dir') ) {

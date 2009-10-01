@@ -5,7 +5,7 @@ use base qw( SWISH::Prog::Class );
 __PACKAGE__->mk_accessors(qw( cache ));
 use Carp;
 
-our $VERSION = '0.27';
+our $VERSION = '0.28';
 
 =pod
 
@@ -43,6 +43,7 @@ call this yourself.
 
 sub init {
     my $self = shift;
+    $self->SUPER::init(@_);
     $self->{cache} ||= {};
 }
 

@@ -4,7 +4,7 @@ use warnings;
 use base qw( SWISH::Prog::Class );
 use Carp;
 
-our $VERSION = '0.27';
+our $VERSION = '0.28';
 
 =pod
 
@@ -43,6 +43,7 @@ Overrides base method.
 
 sub init {
     my $self = shift;
+    $self->SUPER::init(@_);
     $self->{q} ||= [];
 }
 

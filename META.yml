@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               SWISH-Prog
-version:            0.27
+version:            0.28
 abstract:           information retrieval application framework
 author:
     - Peter Karman <karman@cpan.org>
@@ -20,6 +20,7 @@ requires:
     Rose::ObjectX::CAF:  0
     Scalar::Util:        0
     Search::Tools:       0.27
+    SWISH::API::Object:  0.12
     SWISH::Filter:       0.09
     Test::More:          0
     XML::Simple:         0
