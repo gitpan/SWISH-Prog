@@ -10,9 +10,9 @@ use SWISH::Prog::Utils;
 
 __PACKAGE__->mk_accessors(qw( db alias_columns schema ));
 
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
-my $XMLer = Search::Tools::XML->new(); # included in Utils
+my $XMLer = Search::Tools::XML->new();    # included in Utils
 
 =pod
 
@@ -275,7 +275,7 @@ sub _do_table {
             modtime => time(),
             parser  => 'XML*',
             type    => 'application/x-swish-dbi',    # TODO ??
-            row     => $row
+            data    => $row
         );
 
         $indexer->process($doc);

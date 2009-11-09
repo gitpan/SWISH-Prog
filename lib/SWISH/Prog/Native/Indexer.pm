@@ -8,7 +8,7 @@ use SWISH::Prog::Native::InvIndex;
 use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
 my $invindex_class = 'SWISH::Prog::Native::InvIndex';
 
@@ -113,11 +113,11 @@ Returns true if the exe() executable works, false otherwise.
 sub swish_check {
     my $self = shift;
     my $cmd  = $self->exe . " -V";
-    my @vers = `$cmd`;
+    chomp( my @vers = `$cmd` );
     if ( !@vers ) {
         return 0;
     }
-    return 1;
+    return $vers[0];
 }
 
 =head2 start( [cmd] )

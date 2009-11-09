@@ -1,12 +1,14 @@
 --- #YAML:1.0
 name:               SWISH-Prog
-version:            0.28
+version:            0.29
 abstract:           information retrieval application framework
 author:
     - Peter Karman <karman@cpan.org>
 license:            perl
 distribution_type:  module
 configure_requires:
+    ExtUtils::MakeMaker:  0
+build_requires:
     ExtUtils::MakeMaker:  0
 requires:
     Config::General:     2.31
@@ -19,8 +21,7 @@ requires:
     perl:                5.008003
     Rose::ObjectX::CAF:  0
     Scalar::Util:        0
-    Search::Tools:       0.27
-    SWISH::API::Object:  0.12
+    Search::Tools:       0.30
     SWISH::Filter:       0.09
     Test::More:          0
     XML::Simple:         0
@@ -33,7 +34,7 @@ no_index:
     directory:
         - t
         - inc
-generated_by:       ExtUtils::MakeMaker version 6.48
+generated_by:       ExtUtils::MakeMaker version 6.54
 meta-spec:
     url:      http://module-build.sourceforge.net/META-spec-v1.4.html
     version:  1.4

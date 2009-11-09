@@ -45,6 +45,7 @@ t/00_synopsis.t
 t/06_config.t
 t/07_queryparser.t
 t/08_meta.t
+t/09_xml.t
 t/maildir/.INBOX/cur/1201404060.V802I5f9e4M893922.louvin.peknet.com:2,
 t/test.conf
 t/test.pdf

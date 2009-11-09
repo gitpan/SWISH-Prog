@@ -7,7 +7,7 @@ use MIME::Types;
 use File::Basename;
 use Search::Tools::XML;
 
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
 =pod
 
@@ -111,18 +111,55 @@ sub path_parts {
     return ( $path, $file, $ext );
 }
 
-=head2 perl_to_xml( I<ref>, I<root_element> )
+=head2 perl_to_xml( I<ref>, I<root_element> [, I<strip_plural> ] )
 
 Similar to the XML::Simple XMLout() feature, perl_to_xml()
 will take a Perl data structure I<ref> and convert it to XML,
 using I<root_element> as the top-level element.
 
+If I<strip_plural> is true, any trailing C<s> character will be
+stripped from the enclosing tag name whenever an array of hashrefs
+is found. Example:
+
+ my $data = {
+    values => [
+        {   two   => 2,
+            three => 3,
+        },
+        {   four => 4,
+            five => 5,
+        },
+    ],
+ };
+
+ my $xml = $utils->perl_to_xml($data, 'data', 1);
+ 
+ # $xml DOM will look like:
+ 
+ <data>
+  <values>
+   <value>
+    <three>3</three>
+    <two>2</two>
+   </value>
+   <value>
+    <five>5</five>
+    <four>4</four>
+   </value>
+  </values>
+ </data>
+
+Obviously stripping the final C<s> will not always render sensical tag names,
+but is handy when you want to delineate child tagsets within an enclosing
+wrapper tagset.
+
 =cut
 
 sub perl_to_xml {
-    my $self = shift;
-    my $perl = shift;
-    my $root = shift || '_root';
+    my $self         = shift;
+    my $perl         = shift;
+    my $root         = shift || '_root';
+    my $strip_plural = shift || 0;
     unless ( defined $perl ) {
         croak "perl data struct required";
     }
@@ -135,28 +172,31 @@ sub perl_to_xml {
     }
 
     my $xml = $XML->start_tag($root);
-    $self->_ref_to_xml( $perl, '', \$xml );
+    $self->_ref_to_xml( $perl, '', \$xml, $strip_plural );
     $xml .= $XML->end_tag($root);
     return $xml;
 }
 
 sub _ref_to_xml {
-    my ( $self, $perl, $root, $xml_ref ) = @_;
+    my ( $self, $perl, $root, $xml_ref, $strip_plural ) = @_;
     my $type = ref $perl;
     if ( !$type ) {
-        $$xml_ref .= $XML->start_tag($root) if length($root);
+        ( $$xml_ref .= $XML->start_tag($root) )
+            if length($root);
         $$xml_ref .= $XML->utf8_safe($perl);
-        $$xml_ref .= $XML->end_tag($root)   if length($root);
-        $$xml_ref .= "\n";    # just for debugging
+        ( $$xml_ref .= $XML->end_tag($root) )
+            if length($root);
+
+        #$$xml_ref .= "\n";    # just for debugging
     }
     elsif ( $type eq 'SCALAR' ) {
-        $self->_scalar_to_xml( $perl, $root, $xml_ref );
+        $self->_scalar_to_xml( $perl, $root, $xml_ref, $strip_plural );
     }
     elsif ( $type eq 'ARRAY' ) {
-        $self->_array_to_xml( $perl, $root, $xml_ref );
+        $self->_array_to_xml( $perl, $root, $xml_ref, $strip_plural );
     }
     elsif ( $type eq 'HASH' ) {
-        $self->_hash_to_xml( $perl, $root, $xml_ref );
+        $self->_hash_to_xml( $perl, $root, $xml_ref, $strip_plural );
     }
     else {
         croak "unsupported ref type: $type";
@@ -165,12 +205,12 @@ sub _ref_to_xml {
 }
 
 sub _array_to_xml {
-    my ( $self, $perl, $root, $xml_ref ) = @_;
+    my ( $self, $perl, $root, $xml_ref, $strip_plural ) = @_;
     for my $thing (@$perl) {
         if ( ref $thing and length($root) ) {
             $$xml_ref .= $XML->start_tag($root);
         }
-        $self->_ref_to_xml( $thing, $root, $xml_ref );
+        $self->_ref_to_xml( $thing, $root, $xml_ref, $strip_plural );
         if ( ref $thing and length($root) ) {
             $$xml_ref .= $XML->end_tag($root);
         }
@@ -178,27 +218,37 @@ sub _array_to_xml {
 }
 
 sub _hash_to_xml {
-    my ( $self, $perl, $root, $xml_ref ) = @_;
+    my ( $self, $perl, $root, $xml_ref, $strip_plural ) = @_;
     for my $key ( keys %$perl ) {
         my $thing = $perl->{$key};
         if ( ref $thing ) {
-            $$xml_ref .= $XML->start_tag($key);
-            $self->_ref_to_xml( $thing, $key, $xml_ref );
+            my $key_to_pass = $key;
+            my %attr;
+            if ( ref $thing eq 'ARRAY' && $strip_plural ) {
+                $key_to_pass =~ s/s$//i;
+                $attr{count} = scalar @$thing;
+            }
+            $$xml_ref .= $XML->start_tag( $key, \%attr );
+            $self->_ref_to_xml( $thing, $key_to_pass, $xml_ref,
+                $strip_plural );
             $$xml_ref .= $XML->end_tag($key);
-            $$xml_ref .= "\n";                  # just for debugging
+
+            #$$xml_ref .= "\n";                  # just for debugging
         }
         else {
-            $self->_ref_to_xml( $thing, $key, $xml_ref );
+            $self->_ref_to_xml( $thing, $key, $xml_ref, $strip_plural );
         }
     }
 }
 
 sub _scalar_to_xml {
-    my ( $self, $perl, $root, $xml_ref ) = @_;
+    my ( $self, $perl, $root, $xml_ref, $strip_plural ) = @_;
     $$xml_ref
         .= $XML->start_tag($root)
         . $XML->utf8_safe($$perl)
         . $XML->end_tag($root);
+
+    #$$xml_ref .= "\n";    # just for debugging
 }
 
 1;

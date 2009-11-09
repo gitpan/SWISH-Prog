@@ -12,7 +12,7 @@ if ( $MM_Version =~ /_/ )    # dev version
 }
 
 my %required = (
-    'Search::Tools'      => '0.27',
+    'Search::Tools'      => '0.30',
     'File::Basename'     => 0,
     'MIME::Types'        => 0,
     'Path::Class'        => 0,

@@ -9,7 +9,7 @@ use Scalar::Util qw( blessed );
 use SWISH::Prog::Config;
 use SWISH::Prog::InvIndex;
 
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
 __PACKAGE__->mk_accessors(qw( aggregator ));
 
@@ -79,8 +79,10 @@ my %ishort = (
 );
 
 sub init {
-    my $self = shift;
-    $self->SUPER::init(@_);
+    my $self   = shift;
+    my %arg    = @_;
+    my $filter = delete $arg{filter};    # no such method. just convenience.
+    $self->SUPER::init(%arg);
 
     # search mode requires only invindex
     if ( $self->{query} && !$self->{indexer} && !$self->{aggregator} ) {
@@ -160,11 +162,12 @@ sub init {
         croak "$aggregator is not a SWISH::Prog::Aggregator-derived object";
     }
 
-    if ( $self->{filter} ) {
-        $aggregator->set_filter( delete $self->{filter} );
+    if ($filter) {
+        $aggregator->set_filter($filter);
     }
 
     $self->{aggregator} = $aggregator;
+
 }
 
 =head2 aggregator( I<$swish_prog_aggregator> )

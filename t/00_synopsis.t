@@ -11,9 +11,12 @@ SKIP: {
 
     # is executable present?
     my $indexer = SWISH::Prog::Native::Indexer->new;
-    if ( !$indexer->swish_check ) {
+    my $version = $indexer->swish_check;
+    if ( !$version ) {
         skip "swish-e not installed", 3;
     }
+
+    diag("$version installed");
 
     ok( my $program = SWISH::Prog->new(
             invindex   => 't/testindex',

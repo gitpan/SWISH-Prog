@@ -14,7 +14,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
 our $XMLer = Search::Tools::XML->new;
 

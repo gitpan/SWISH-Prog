@@ -103,3 +103,9 @@ Revision history for Perl extension Prog.
 0.28   30 Sept 2009
         * add some missing calls to SUPER::init()
 
+0.29   8 Nov 2009
+        * add strip_plural option to Utils->perl_to_xml()
+        * add count attribute to arrayref values of hashrefs in perl_to_xml()
+        * fix method/param name strictness bug revealed by Rose::ObjectX::CAF 0.03. 
+          This mostly required internal param name changes to official method names.
+

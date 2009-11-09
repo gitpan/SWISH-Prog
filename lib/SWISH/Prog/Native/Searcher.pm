@@ -9,7 +9,7 @@ use SWISH::Prog::Native::Result;
 
 __PACKAGE__->mk_accessors(qw( swish sao_opts result_class ));
 
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
 =head1 NAME
 
@@ -46,6 +46,18 @@ sub init {
 
     return $self;
 }
+
+=head2 sao_opts( I<array_ref> )
+
+Options to pass to SWISH::API::Object in new().
+
+=head2 result_class( I<class_name> )
+
+Passed to SWISH::API::Object in new().
+
+=head2 swish
+
+The SWISH::API::Object instance.
 
 =head2 search( I<query> )
 

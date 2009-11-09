@@ -20,7 +20,7 @@ SKIP: {
     my @meth = qw( one two three );
     {
 
-        package foo;
+        package MyClass;
         use base 'SWISH::Prog::Class';
         __PACKAGE__->mk_accessors(@meth);
     }
@@ -41,7 +41,7 @@ SKIP: {
                         two   => [ $_ + 2 ],
                         three => { sum => $_ + 3 }
                     },
-                    'foo'
+                    'MyClass'
                 )
             ),
             "object blessed"
@@ -50,10 +50,12 @@ SKIP: {
 
     # create prog parts
     ok( my $aggregator = SWISH::Prog::Aggregator::Object->new(
-            class   => 'foo',
+            class   => 'MyClass',
             methods => [@meth],
             title   => 'one',
-            name    => 'swishobjects',
+
+            #name    => 'swishobjects',
+
             indexer => SWISH::Prog::Native::Indexer->new(
 
                 #debug    => 1,

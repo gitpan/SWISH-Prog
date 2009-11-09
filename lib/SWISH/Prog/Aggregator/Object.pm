@@ -13,7 +13,7 @@ use Scalar::Util qw( blessed );
 __PACKAGE__->mk_accessors(
     qw( methods class title url modtime serial_format ));
 
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
 my $XMLer = Search::Tools::XML->new();    # included in Utils
 
@@ -253,7 +253,7 @@ sub get_doc {
         modtime => $modtime,
         parser  => 'XML*',
         type    => 'application/x-object',
-        obj     => $object
+        data    => $object
     );
 
     $self->debug and print $doc;
