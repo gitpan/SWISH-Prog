@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               SWISH-Prog
-version:            0.29
+version:            0.30
 abstract:           information retrieval application framework
 author:
     - Peter Karman <karman@cpan.org>

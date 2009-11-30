@@ -8,7 +8,7 @@ use SWISH::Filter;
 use SWISH::Prog::Doc;
 use Scalar::Util qw( blessed );
 
-our $VERSION = '0.29';
+our $VERSION = '0.30';
 
 __PACKAGE__->mk_accessors(
     qw( set_parser_from_type indexer doc_class swish_filter_obj ));

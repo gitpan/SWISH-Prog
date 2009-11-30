@@ -5,7 +5,7 @@ use base qw( Rose::ObjectX::CAF );
 use Carp;
 use Data::Dump qw( dump );
 
-our $VERSION = '0.29';
+our $VERSION = '0.30';
 
 __PACKAGE__->mk_accessors(qw( debug verbose warnings ));
 

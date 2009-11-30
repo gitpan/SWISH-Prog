@@ -109,3 +109,7 @@ Revision history for Perl extension Prog.
         * fix method/param name strictness bug revealed by Rose::ObjectX::CAF 0.03. 
           This mostly required internal param name changes to official method names.
 
+0.30   29 Nov 2009
+        * change KinoSearch to KSx in implementation registry
+        * fix bug in base Searcher where InvIndex class was not loaded.
+

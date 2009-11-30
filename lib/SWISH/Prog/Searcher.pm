@@ -6,7 +6,7 @@ use Carp;
 use Scalar::Util qw( blessed );
 use SWISH::Prog::QueryParser;
 
-our $VERSION = '0.29';
+our $VERSION = '0.30';
 
 __PACKAGE__->mk_accessors(
     qw(
@@ -95,6 +95,8 @@ sub init {
         # assume a InvIndex in the same namespace as $self
         my $class = ref($self);
         $class =~ s/::Searcher$/::InvIndex/;
+        eval "require $class";
+        croak $@ if $@;
         $self->{invindex}
             = $class->new( path => $self->{invindex}, clobber => 0 );
 
