@@ -8,7 +8,7 @@ use Carp;
 __PACKAGE__->mk_accessors(qw( version ));
 use bytes;    # so length() measures bytes
 
-our $VERSION = '0.30';
+our $VERSION = '0.31';
 our $AutoURL = time();
 our %Headers = (
     2 => {
@@ -168,7 +168,7 @@ the SWISH::Prog parser() method.
 
 The MIME type of the document. If not supplied, it will be guessed at based
 on the file extension of the URL (if supplied) or $DefMime. B<NOTE>: MIME type
-is only used in SWISH::Parser headers.
+is only used in SWISH::3 headers.
 
 =item action
 
@@ -204,15 +204,15 @@ is thrown.
 =back
 
 B<NOTE:> The special environment variable C<SWISH3> is checked in order to 
-determine the correct header labels. If you are using SWISH::Parser,
-you must set that environment variable, or indicate the version with
-the C<version> option.
+determine the correct header labels. If you are using SWISH::3,
+the environment variable is set for you. Otherwise, set the version with
+the B<version> method or param.
 
 =head1 Headers API
 
 See the Swish-e documentation at L<http://swish-e.org/>.
 
-For SWISH::3::Parser Headers API (which is slightly different) see
+For SWISH::3 Headers API (which is slightly different) see
 L<http://dev.swish-e.org/wiki/swish3/>.
  
 =head1 AUTHOR
@@ -236,6 +236,10 @@ You can find documentation for this module with the perldoc command.
 You can also look for information at:
 
 =over 4
+
+=item * Mailing list
+
+L<http://lists.swish-e.org/listinfo/users>
 
 =item * RT: CPAN's request tracker
 

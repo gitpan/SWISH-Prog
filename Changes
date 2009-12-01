@@ -113,3 +113,6 @@ Revision history for Perl extension Prog.
         * change KinoSearch to KSx in implementation registry
         * fix bug in base Searcher where InvIndex class was not loaded.
 
+0.31   1  Dec 2009
+        * POD fixes
+       
