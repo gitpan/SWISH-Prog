@@ -27,6 +27,9 @@ SKIP: {
         )
     );
 
+    # skip our local config test files
+    $program->config->FileRules('dirname contains config');
+
     ok( $program->run('t/'), "run program" );
 
     is( $program->count, 6, "indexed test docs" );

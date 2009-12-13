@@ -4,8 +4,10 @@ use warnings;
 use base qw( SWISH::Prog::Class );
 use Scalar::Util qw( blessed );
 use Carp;
+use Data::Dump qw( dump );
+use SWISH::Prog::Config;
 
-our $VERSION = '0.31';
+our $VERSION = '0.32';
 
 __PACKAGE__->mk_accessors(qw( invindex config count clobber flush started ));
 
@@ -55,7 +57,7 @@ Overrite any existing InvIndex.
 
 =item config
 
-A SWISH::Prog::Config object.
+A SWISH::Prog::Config object or file name.
 
 =item flush
 
@@ -67,6 +69,25 @@ should be written to disk.
 A SWISH::Prog::InvIndex object.
 
 =back
+
+=head2 init
+
+Override base method to initialize object.
+
+=cut
+
+sub init {
+    my $self = shift;
+    $self->SUPER::init(@_);
+    if (    exists $self->{config}
+        and !blessed( $self->{config} )
+        and $self->{config} !~ m/<swish>|\.xml$/ )
+    {
+        $self->{config}
+            = $self->verify_isa_swish_prog_config( $self->{config} );
+    }
+    return $self;
+}
 
 =head2 start
 
@@ -125,6 +146,62 @@ integer.
 
 =cut
 
+# NOTE in _verify_swish3_config() below,
+# if config is already in swish3 format, must
+# override param value with SWISH::Prog::Config object
+# after adding to SWISH::3::Config object so that the
+# aggregator using this Indexer is happy.
+
+sub _verify_swish3_config {
+    my $self = shift;
+
+    if ( !exists $self->{config} ) {
+        return;
+    }
+
+    #carp dump $self->{config};
+
+    # isa object
+    if ( blessed( $self->{config} ) ) {
+        $self->{config}
+            = $self->verify_isa_swish_prog_config( $self->{config} );
+        my $swish_3_config = $self->{config}->ver2_to_ver3();
+        $self->{s3}->config->add($swish_3_config);
+    }
+
+    # xml string
+    elsif ( $self->{config} =~ m/<swish>|[\n\r]/ ) {
+        $self->{s3}->config->add( $self->{config} );
+        $self->{config} = SWISH::Prog::Config->new();
+    }
+
+    # file
+    elsif ( -r $self->{config} ) {
+
+        # swish3 format
+        if ( $self->{config} =~ m/\.xml/ ) {
+            $self->{s3}->config->add( $self->{config} );
+            $self->{config} = SWISH::Prog::Config->new();
+        }
+
+        # swish2 format
+        else {
+            $self->{config}
+                = $self->verify_isa_swish_prog_config( $self->{config} );
+            my $swish_3_config = $self->{config}->ver2_to_ver3();
+            $self->{s3}->config->add($swish_3_config);
+        }
+
+    }
+
+    # no support
+    else {
+        croak
+            "Unsupported config format (not a XML string, filename or SWISH::Prog::Config object): $self->{config}";
+    }
+
+    return $self->{config};
+}
 1;
 
 __END__

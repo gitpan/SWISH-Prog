@@ -6,7 +6,7 @@ use Carp;
 use Scalar::Util qw( blessed );
 use SWISH::Prog::QueryParser;
 
-our $VERSION = '0.31';
+our $VERSION = '0.32';
 
 __PACKAGE__->mk_accessors(
     qw(

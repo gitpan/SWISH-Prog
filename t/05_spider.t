@@ -17,7 +17,8 @@ SKIP: {
     use_ok('SWISH::Prog::Native::Indexer');
 
     # is executable present?
-    my $indexer = SWISH::Prog::Native::Indexer->new;
+    my $indexer
+        = SWISH::Prog::Native::Indexer->new( 'invindex' => 't/spider.index' );
     if ( !$indexer->swish_check ) {
         skip "swish-e not installed", 2;
     }

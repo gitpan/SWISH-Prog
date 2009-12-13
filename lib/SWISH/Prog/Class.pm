@@ -4,8 +4,10 @@ use warnings;
 use base qw( Rose::ObjectX::CAF );
 use Carp;
 use Data::Dump qw( dump );
+use SWISH::Prog::Config;
+use Scalar::Util qw( blessed );
 
-our $VERSION = '0.31';
+our $VERSION = '0.32';
 
 __PACKAGE__->mk_accessors(qw( debug verbose warnings ));
 
@@ -44,7 +46,11 @@ construction time. Called by new().
 
 =head2 debug
 
+Get/set the debug level. Default is 0.
+
 =head2 warnings
+
+Get/set the warnings level. Default is 0.
 
 =head2 verbose
 
@@ -55,7 +61,7 @@ Get/set flags affecting the verbosity of the program.
 sub init {
     my $self = shift;
     $self->SUPER::init(@_);
-    $self->{debug} = $ENV{PERL_DEBUG} || 0;
+    $self->{debug} ||= $ENV{PERL_DEBUG} || 0;
     $self->{_start} = time();
     return $self;
 }
@@ -76,6 +82,45 @@ Returns $self (and I<data> if present) via Data::Dump::dump. Useful for peering
 inside an object or other scalar.
 
 =cut
+
+=head2 verify_isa_swish_prog_config([I<config>])
+
+Returns a SWISH::Prog::Config object based on I<config>. 
+
+I<config> may be a readable file name or a SWISH::Prog::Config object.
+
+Will croak if I<config> is neither of the above.
+
+=cut
+
+sub verify_isa_swish_prog_config {
+    my $self    = shift;
+    my $config2 = shift;
+
+    #carp "verify_isa_config: $config2";
+
+    my $config2_object;
+    if ( !$config2 ) {
+        $config2_object = SWISH::Prog::Config->new();
+    }
+    elsif ( !blessed($config2) && -r $config2 ) {
+        $config2_object = SWISH::Prog::Config->new($config2);
+    }
+    elsif ( blessed($config2) ) {
+        if ( !$config2->isa('SWISH::Prog::Config') ) {
+            croak
+                "config object does not inherit from SWISH::Prog::Config: $config2";
+        }
+        else {
+            $config2_object = $config2;
+        }
+    }
+    else {
+        croak "$config2 is neither an object nor a readable file";
+    }
+
+    return $config2_object;
+}
 
 1;
 

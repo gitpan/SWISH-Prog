@@ -7,7 +7,7 @@ use MIME::Types;
 use File::Basename;
 use Search::Tools::XML;
 
-our $VERSION = '0.31';
+our $VERSION = '0.32';
 
 =pod
 
@@ -43,7 +43,7 @@ Hash of MIME types to their equivalent parser.
 =cut
 
 our $ExtRE
-    = qr{(html|htm|xml|txt|pdf|ps|doc|ppt|xls|mp3|css|ico|js|php)(\.gz)?}io;
+    = qr{\.(html|htm|xml|txt|pdf|ps|doc|ppt|xls|mp3|css|ico|js|php)(\.gz)?}io;
 our %ParserTypes = (
 
     # mime                  parser type
@@ -87,8 +87,8 @@ sub mime_type {
 
         # cache the mime type as a string
         # to avoid the MIME::Type::type() stringification
-
-        $ext2mime{$ext} = $mime_types->mimeTypeOf($url) . "";
+        my $mime = $mime_types->mimeTypeOf($url) or return;
+        $ext2mime{$ext} = $mime . "";
     }
     return $ext2mime{$ext};
 }
@@ -117,9 +117,9 @@ Similar to the XML::Simple XMLout() feature, perl_to_xml()
 will take a Perl data structure I<ref> and convert it to XML,
 using I<root_element> as the top-level element.
 
-If I<strip_plural> is true, any trailing C<s> character will be
-stripped from the enclosing tag name whenever an array of hashrefs
-is found. Example:
+If I<strip_plural> is a true value and not a CODE ref, 
+any trailing C<s> character will be stripped from the enclosing tag name 
+whenever an array of hashrefs is found. Example:
 
  my $data = {
     values => [
@@ -149,11 +149,20 @@ is found. Example:
   </values>
  </data>
 
-Obviously stripping the final C<s> will not always render sensical tag names,
-but is handy when you want to delineate child tagsets within an enclosing
-wrapper tagset.
+Obviously stripping the final C<s> will not always render sensical tag names.
+Pass a CODE ref instead, expecting one value (the tag name) and returning the
+tag name to use:
+
+ use Lingua::EN::Inflect;
+ my $xml = $utils->perl_to_xml($data, 'data', \&Lingua::EN::Inflect::PL);
 
 =cut
+
+sub _make_singular {
+    my ($t) = @_;
+    $t =~ s/s$//i;
+    return length $t ? $t : $_[0];
+}
 
 sub perl_to_xml {
     my $self         = shift;
@@ -162,6 +171,10 @@ sub perl_to_xml {
     my $strip_plural = shift || 0;
     unless ( defined $perl ) {
         croak "perl data struct required";
+    }
+
+    if ( $strip_plural and ref($strip_plural) ne 'CODE' ) {
+        $strip_plural = \&_make_singular;
     }
 
     if ( !ref $perl ) {
@@ -225,7 +238,7 @@ sub _hash_to_xml {
             my $key_to_pass = $key;
             my %attr;
             if ( ref $thing eq 'ARRAY' && $strip_plural ) {
-                $key_to_pass =~ s/s$//i;
+                $key_to_pass = $strip_plural->($key_to_pass);
                 $attr{count} = scalar @$thing;
             }
             $$xml_ref .= $XML->start_tag( $key, \%attr );

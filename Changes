@@ -115,4 +115,14 @@ Revision history for Perl extension Prog.
 
 0.31   1  Dec 2009
         * POD fixes
-       
+      
+0.32   12 Dec 2009
+        * Config->ver2_to_ver3() method now supported.
+        * fix bug in Prog.pm to allow Config passed in aggregator
+          and Indexer passed in aggregator
+        * removed dependency on Class::Accessor for Config.pm
+        * refactor internal handling of Config object so there is only ever one
+          per Prog instance
+        * refactor internal handling of Config to support SWISH::3::Config
+        * FileRules support now in Aggregator::FS
+ 

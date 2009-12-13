@@ -1,0 +1,191 @@
+#!/usr/bin/env perl
+#
+# SWISH::Prog-based swish3 example
+
+use strict;
+use warnings;
+use Carp;
+use SWISH::Prog;
+use Getopt::Long qw(:config no_ignore_case);
+
+my $VERSION = '3.0.1';
+
+my $USAGE = qq{$0 
+ usage:
+    swish3 [-e] [-i dir file ... ] [-S aggregator] [-c file] [-f invindex] [-l] [-v (num)]
+    swish3 -w word1 word2 ... [-f file1 file2 ...] \
+          [-P phrase_delimiter] [-p prop1 ...] [-s sortprop1 [asc|desc] ...] \
+          [-m num] [-t str] [-d delim] [-H (num)] [-x output_format] \
+          [-R rank_scheme] [-L prop low high]
+    swish3 -k (char|*) [-f invindex1 invindex2 ...]
+    swish3 -M invindex1 invindex2 ... outputfile
+    swish3 -N /path/to/compare/file
+    swish3 -V
+
+ options: defaults are in brackets
+ # commented options are not yet supported
+ 
+ indexing options:
+    -c : configuration file(s)
+    -D  : Debug mode
+    -f : invindex dir to create or search from [index.swish]
+    -F : next param is invindex format (ks, xapian, native, or dbi) [native]
+    -i : create an index from the specified files
+        for "-S fs" - specify a list of files or directories
+        for "-S spider" - specify a list of URLs
+    #-l : follow symbolic links when indexing
+    #-M : merges index files
+    #-N : index only files with a modification date newer than path supplied
+    -S : specify which aggregator to use.
+        Valid options are:
+         "fs" - local files in your File System
+         "spider" - web site files using a web crawler
+         #"prog"  - use the program API 
+        The default value is: "fs" 
+    #-T : Trace options ('-T help' for info)
+    -W : next param is ParserWarnLevel [-W 2]
+    
+ search options:
+    -b : begin results at this number
+    #-d : next param is delimiter.
+    #-E : Append errors to file specified, or stderr if file not specified.
+    #-e : "Economic Mode": The index proccess uses less RAM.
+    -f : invindex dir to create or search from [index.swish]
+    -F : next param is invindex format (ks, xapian, native, or dbi) [native]
+    #-H : "Result Header Output": verbosity (0 to 9)  [1].
+    #-k : Print words starting with a given char.
+    #-L : Limit results to a range of property values
+    -m : the maximum number of results to return [defaults to all results]
+    #-P : next param is Phrase delimiter.
+    #-p : include these document properties in the output "prop1 prop2 ..."
+    #-R : next param is Rank Scheme number (0 to 1)  [0].
+    #-s : sort by these document properties in the output "prop1 prop2 ..."
+    #-T : Trace options ('-T help' for info)
+    #-t : tags to search in - specify as a string
+    #    "HBthec" - in Head|Body|title|header|emphasized|comments
+    -V : prints the current version
+    -v : indexing verbosity level (0 to 3) [-v 1]
+    -w : search for words "word1 word2 ..."
+    #-x : "Extended Output Format": Specify the output format.
+
+version: $VERSION
+ docs: http://swish-e.org/swish3/
+};
+
+my $Opt = {
+    verbose  => 0,
+    Version  => 0,
+    Debug    => 0,
+    config   => '',              #SWISH::Prog::Config->new
+    Warnings => 2,
+    Source   => 'fs',
+    Format   => 'native',
+    query    => '',
+    input    => 0,
+    folder   => 'index.swish',
+    begin    => 0,
+    max      => undef,
+};
+
+my %allopts = (
+    'config=s'            => 'config file',
+    'verbose:i'           => 'be verbose',
+    'debug|Debug'         => 'debugging',
+    'Warnings=i'          => 'print libxml2 warnings',
+    'aggregator|Source=s' => 'aggregator type',
+    'Format=s'            => 'indexer type (native, ks, xapian, dbi)',
+    'query|words=s'       => 'search query',
+    'input'               => 'indexing mode',
+    'folder=s'            => 'invindex dir',
+    'begin=i'             => 'begin results [0]',
+    'max=i'               => 'max results [all]',
+    'Version'             => 'print Version',
+);
+
+GetOptions( $Opt, keys %allopts ) or die $USAGE;
+
+if ( $Opt->{Version} ) {
+    print "$0 $VERSION\n";
+    exit;
+}
+
+#croak $USAGE unless @ARGV;
+
+if ( $Opt->{input} ) {
+    $Opt->{indexer} = $Opt->{Format};
+}
+$Opt->{invindex} = $Opt->{folder};
+
+$Opt->{debug} and Data::Dump::dump $Opt;
+
+$ENV{SWISH_WARNINGS} = $Opt->{Warnings};
+
+my %prog_can;
+for ( keys %$Opt ) {
+    if ( SWISH::Prog->can($_) ) {
+        $prog_can{$_} = $Opt->{$_};
+    }
+}
+my $prog = SWISH::Prog->new(%prog_can);
+if ( $Opt->{input} ) {
+    my $start    = time();
+    my $num_docs = $prog->index(@ARGV);
+    my $end      = time();
+    my $elapsed  = $end - $start;
+    printf("%d documents in %s\n", $num_docs, secs2hms($elapsed));
+}
+elsif ( $Opt->{query} ) {
+    my $invindex = $prog->invindex;
+    my $meta     = $invindex->meta;
+    my $format   = $meta->Index->{Format};
+    my $sclass   = "SWISH::Prog::${format}::Searcher";
+    eval "require $sclass";
+    croak $@ if $@;
+    my $searcher = $sclass->new(
+        invindex => $invindex->path . '',
+        config   => $prog->config,
+    );
+    my $results = $searcher->search(
+        $Opt->{query},
+        {   start => $Opt->{begin},
+            max   => $Opt->{max},
+        }
+    );
+
+    while ( my $result = $results->next ) {
+        printf( qq{%4d %s "%s"\n},
+            $result->score, $result->uri, $result->title );
+    }
+}
+elsif ( $Opt->{Version} ) {
+    print "$0 $VERSION\n";
+}
+else {
+    print $USAGE;
+}
+exit;
+
+sub secs2hms {
+    my $secs  = shift || 0;
+    my $hours = int( $secs / 3600 );
+    my $rm    = $secs % 3600;
+    my $min   = int( $rm / 60 );
+    my $sec   = $rm % 60;
+    return sprintf( "%02d:%02d:%02d", $hours, $min, $sec );
+}
+
+=pod
+
+=head1 AUTHOR
+
+Peter Karman, E<lt>perl@peknet.comE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2009 by Peter Karman
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
+
+=cut
+

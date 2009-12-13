@@ -8,7 +8,7 @@ use SWISH::Prog::Native::InvIndex;
 use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 
-our $VERSION = '0.31';
+our $VERSION = '0.32';
 
 my $invindex_class = 'SWISH::Prog::Native::InvIndex';
 
@@ -145,7 +145,7 @@ sub start {
     my $cmd = shift || "$exe $opts -f $index -v$v -W$w -S prog -i stdin";
 
     if ( !$self->config->file ) {
-        $self->config->write2;
+        $self->config->write2( 0, 1 );    # write in prog mode
     }
     my $config_file = $self->config->file;
     $cmd .= ' -c ' . $config_file;

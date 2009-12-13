@@ -9,7 +9,7 @@ use Scalar::Util qw( blessed );
 use SWISH::Prog::Config;
 use SWISH::Prog::InvIndex;
 
-our $VERSION = '0.31';
+our $VERSION = '0.32';
 
 __PACKAGE__->mk_accessors(qw( aggregator ));
 
@@ -89,22 +89,28 @@ sub init {
         return;
     }
 
-    # need to make sure we have 3 items:
-    # aggregator
-    # indexer
-    # config
+    # need to make sure we have an aggregator
     # indexer and/or config might already be set in aggregator
     # but if set here, we override.
 
-    my ( $aggregator, $indexer, $config );
+    my ( $aggregator, $indexer );
 
+    # ok if undef
+    my $config = $self->{config};
+
+    # get indexer
     $indexer = $self->{indexer} || 'native';
+    if ( $self->{aggregator} and blessed( $self->{aggregator} ) ) {
+        $indexer = $self->{aggregator}->indexer;
+        $config  = $self->{aggregator}->config;
+    }
     if ( !blessed($indexer) ) {
 
         if ( exists $ishort{$indexer} ) {
             $indexer = $ishort{$indexer};
         }
 
+        $self->debug and warn "creating indexer: $indexer";
         eval "require $indexer";
         if ($@) {
             croak "invalid indexer $indexer: $@";
@@ -112,48 +118,29 @@ sub init {
         $indexer = $indexer->new(
             debug    => $self->debug,
             invindex => $self->{invindex},    # may be undef
-            verbose  => $self->verbose
+            verbose  => $self->verbose,
+            config   => $config,              # may be undef
         );
     }
     elsif ( !$indexer->isa('SWISH::Prog::Indexer') ) {
         croak "$indexer is not a SWISH::Prog::Indexer-derived object";
     }
 
-    $config = $self->{config} || SWISH::Prog::Config->new(
-        debug   => $self->debug,
-        verbose => $self->verbose
-    );
-    if ( !blessed($config) ) {
-
-        unless ( -r $config ) {
-            croak "config file $config is not read-able: $!";
-        }
-
-        # TODO test for ver2 vs. ver3 style in config
-        $config = SWISH::Prog::Config->new(
-            debug   => $self->debug,
-            file    => $config,
-            verbose => $self->verbose
-        );
-    }
-    elsif ( !$config->isa('SWISH::Prog::Config') ) {
-        croak "$config is not a SWISH::Prog::Config-derived object";
-    }
-
     $aggregator = $self->{aggregator} || 'fs';
+
     if ( !blessed($aggregator) ) {
 
         if ( exists $ashort{$aggregator} ) {
             $aggregator = $ashort{$aggregator};
         }
 
+        $self->debug and warn "creating aggregator: $aggregator";
         eval "require $aggregator";
         if ($@) {
             croak "invalid aggregator $aggregator: $@";
         }
         $aggregator = $aggregator->new(
             indexer => $indexer,
-            config  => $config,
             debug   => $self->debug,
             verbose => $self->verbose
         );
@@ -167,7 +154,11 @@ sub init {
     }
 
     $self->{aggregator} = $aggregator;
+    $self->{indexer}    = $indexer;
 
+    $self->debug and carp dump $self;
+
+    return $self;
 }
 
 =head2 aggregator( I<$swish_prog_aggregator> )
@@ -212,7 +203,10 @@ sub config {
     if ( $self->aggregator ) {
         return $self->aggregator->config;
     }
-    return $self->{config} || SWISH::Prog::Config->new;
+    if ( $self->indexer ) {
+        return $self->indexer->config;
+    }
+    return undef;
 }
 
 =head2 invindex

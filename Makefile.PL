@@ -89,16 +89,25 @@ WriteMakefile(
     PL_FILES      => {},
     dist          => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean         => {
-        FILES =>
-            't/dbi_index t/swishobjects t/testindex t/object.index t/xapian_index'
+        FILES => join(
+            ' ',
+            qw(
+                t/dbi.index
+                t/swishobjects
+                t/testindex
+                t/object.index
+                t/xapian.index
+                t/index.swish
+                t/spider.index
+                t/mail.index
+                )
+        )
     },
     ( $MM_Version >= 6.48 ? ( MIN_PERL_VERSION => '5.8.3' ) : () ),
     ( $MM_Version >= 6.31 ? ( LICENSE          => 'perl' )  : () ),
-    (   $MM_Version <= 6.44 ? ()
-        :
-
-            (
-            META_MERGE => {
+    (   $MM_Version <= 6.44
+        ? ()
+        : ( META_MERGE => {
                 resources => {
                     license  => 'http://dev.perl.org/licenses/',
                     homepage => 'http://dev.swish-e.org/wiki/perl',
@@ -107,7 +116,7 @@ WriteMakefile(
                     repository => 'http://svn.swish-e.org/perl/SWISH-Prog/',
                 },
             }
-            )
+        )
     ),
 
 );

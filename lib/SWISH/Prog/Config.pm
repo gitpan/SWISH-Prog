@@ -7,19 +7,20 @@ use Config::General;
 use Data::Dump qw( dump );
 use File::Temp ();
 use Search::Tools::XML;
-use Path::Class qw();    # we have our own file() method
+use Search::Tools::UTF8;
+use SWISH::Prog::Utils;
+use File::Spec;
 use overload(
     '""'     => \&stringify,
     bool     => sub {1},
     fallback => 1,
 );
 
-our $VERSION = '0.31';
+our $VERSION = '0.32';
 
-our $XMLer = Search::Tools::XML->new;
+my $XML = Search::Tools::XML->new;
 
-# TODO can't use SWISH::Prog::Class because we override the get/set magic.
-use base qw( Class::Accessor );
+use base qw( SWISH::Prog::Class );
 
 my %unique = map { $_ => 1 } qw(
     MetaNames
@@ -111,8 +112,9 @@ my @Opts = qw(
     Words
     XMLClassAttributes
 );
+my %Opts = map { $_ => $_ } @Opts;
 
-__PACKAGE__->mk_accessors( qw( file debug verbose ), @Opts );
+__PACKAGE__->mk_accessors(qw( file debug verbose ));
 
 =head1 NAME
 
@@ -123,6 +125,9 @@ SWISH::Prog::Config - read/write Swish-e config files
  use SWISH::Prog::Config;
  
  my $config = SWISH::Prog::Config->new;
+ $config->write2();
+ $config->read2('path/to/file.conf');
+ $config->write3();
  
  
 =head1 DESCRIPTION
@@ -152,11 +157,10 @@ Example:
 
 =head1 METHODS
 
-NOTE this class inherits from Class::Accessor and not SWISH::Prog::Class.
-
 =head2 new( I<params> )
 
-Instatiate a new Config object. Takes a hash of key/value pairs, where each key
+Instantiate a new Config object. 
+Takes a hash of key/value pairs, where each key
 may be a Swish-e configuration parameter.
 
 Example:
@@ -169,21 +173,51 @@ Example:
 
 sub new {
     my $class = shift;
-    my $opts  = ref( $_[0] ) ? $_[0] : {@_};
-    my $self  = $class->SUPER::new($opts);
+    my ( %args, $file2read );
+    if ( @_ == 1 && !ref $_[0] ) {
+        $file2read = shift;
+    }
+    elsif ( !ref $_[0] ) {
+        %args = @_;
+    }
+    else {
+        %args = %{ $_[0] };
+    }
+    my $self = $class->SUPER::new( \%args );
     $self->{'_start'} = time;
     $self->IgnoreTotalWordCountWhenRanking(0)
         unless defined $self->IgnoreTotalWordCountWhenRanking;
+
+    if ($file2read) {
+        $self->read2($file2read);
+    }
+
     return $self;
 }
 
-=head2 set
+=head2 debug
 
-Override the Class::Accessor method.
+Get/set the debug level. Default is 0.
+
+=head2 verbose
+
+Get/set flags affecting the verbosity of the program.
 
 =cut
 
-sub set {
+=head2 get_opt_names
+
+Class method.
+
+Returns array ref of all the option (method) names supported.
+
+=cut
+
+sub get_opt_names {
+    return [@Opts];
+}
+
+sub _set {
     my $self = shift;
     my ( $key, $val, $append ) = @_;
 
@@ -211,13 +245,7 @@ sub set {
 
 }
 
-=head2 get
-
-Override the Class::Accessor method.
-
-=cut
-
-sub get {
+sub _get {
     my $self = shift;
     my $key  = shift;
 
@@ -276,51 +304,57 @@ sub read2 {
     my $buf = read_file("$file");
 
     # filter include syntax to work with Config::General's
-    $buf =~ s,IncludeConfigFile (.+?)\n,<<include $1>>\n,g;
+    $buf =~ s,IncludeConfigFile (.+?)\n,Include $1\n,g;
 
-    my $dir = Path::Class::file($file)->parent;
+    my ( $volume, $dir, $filename ) = File::Spec->splitpath($file);
 
     my $c = Config::General->new(
-        -String          => $buf,
-        -IncludeRelative => 1,
-        -ConfigPath      => [$dir]
+        -String           => $buf,
+        -IncludeRelative  => 1,
+        -ConfigPath       => [$dir],
+        -ApacheCompatible => 1,
     ) or return;
 
     my %conf = $c->getall;
 
     for ( keys %conf ) {
         my $v = $conf{$_};
-        $self->$_($v);
+        $self->$_( $v, 1 );
     }
 
     return \%conf;
 }
 
-=head2 write2( I<path/file> )
+=head2 write2( I<path/file> [,I<prog_mode>] )
 
 Writes version 2 compatible config file.
 
 If I<path/file> is omitted, a temp file will be
 written using File::Temp.
 
+If I<prog_mode> is true all config directives 
+inappropriate for the -S prog mode in the Native::Indexer
+are skipped. The default is false.
+
 Returns full path to file.
 
 Full path is also available via file() method.
-
 
 =head2 file
 
 Returns name of the file written by write2().
 
-
 =cut
 
 sub write2 {
-    my $self = shift;
-    my $file = shift || File::Temp->new();
+    my $self      = shift;
+    my $file      = shift || File::Temp->new();
+    my $prog_mode = shift || 0;
 
     # stringify both
-    write_file( "$file", "$self" );
+    write_file( "$file", $self->stringify($prog_mode) );
+
+    #warn "$self";
 
     warn "wrote config file $file" if $self->debug;
 
@@ -385,9 +419,12 @@ sub all_metanames {
     return \@meta;
 }
 
-=head2 stringify
+=head2 stringify([I<prog_mode>])
 
 Returns object as version 2 formatted scalar.
+
+If I<prog_mode> is true skips inappropriate directives for
+running the Native::Indexer. Default is false. See write2().
 
 This method is used to overload the object for printing, so these are
 equivalent:
@@ -399,6 +436,7 @@ equivalent:
 
 sub stringify {
     my $self = shift;
+    my $prog_mode = shift || 0;
     my @config;
 
    # must pass metanames and properties first, since others may depend on them
@@ -414,6 +452,9 @@ sub stringify {
 
     for my $name (@Opts) {
         next if exists $unique{$name};
+        if ( $prog_mode && $name =~ m/^File/ ) {
+            next;
+        }
 
         my $v = $self->$name;
         next unless defined $v;
@@ -454,63 +495,340 @@ If I<file> is omitted, uses the current values in the calling object.
 =cut
 
 sub ver2_to_ver3 {
-    my $self = shift;
-    my $file = shift;
+    my $self         = shift;
+    my $file         = shift;
+    my $no_timestamp = shift || 0;
 
     # list of config directives that take arguments to the opt value
     # i.e. the directive has 3 or more parts
     my %takes_arg = map { $_ => 1 } qw(
-
-        StoreDescription
-        PropertyNamesSortKeyLength
-        PropertyNamesMaxLength
-        PropertyNameAlias
-        MetaNameAlias
-        IndexContents
-        IgnoreWords
         ExtractPath
         FileFilter
         FileRules
+        IgnoreWords
+        IndexContents
+        MetaNameAlias
+        MetaNamesRank
+        PropertyNameAlias
+        PropertyNamesMaxLength
+        PropertyNamesSortKeyLength
         ReplaceRules
+        StoreDescription
         Words
-
     );
 
-    my $config = $file ? $self->new->read2($file) : $self->as_hash;
-    my $time = localtime();
+    my %parser_map = (
+        'XML'  => 'application/xml',
+        'HTML' => 'text/html',
+        'TXT'  => 'text/plain',
+    );
 
-    # TODO  what if this encoding is not correct?
+    my %remap = (
+        'IndexDir'    => 'SourceDir',
+        'IndexOnly'   => 'SourceOnly',
+        'IndexReport' => 'Verbosity',
+    );
+
+    my %unsupported = map { $_ => 1 } qw(
+        BeginCharacters
+        Delay
+        EndCharacters
+        EquivalentServer
+        FileFilter
+        FileFilterMatch
+        FileMatch
+        FileRules
+        FileRules
+        IgnoreFirstChar
+        IgnoreLastChar
+        MaxDepth
+        ReplaceRules
+        SpiderDirectory
+        SwishProgParameters
+        TmpDir
+        WordCharacters
+    );
+    my $disclaimer = "<!-- WARNING: CONFIG ignored by Swish3 -->\n ";
+
+    my $config = $file ? $self->new->read2($file) : $self->as_hash;
+    my $time = $no_timestamp ? '' : localtime();
+
     my $xml = <<EOF;
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- converted with SWISH::Prog::Config ver2_to_ver3() $time -->
 <swish>
- <Index>
-  <Format>Native</Format>
- </Index>
- <!-- this feature is not yet fully supported -->
 EOF
 
     #warn dump $config;
 
-#KEY: for my $k ( sort keys %$config ) {
-#        my @args = ref $config->{$k} ? @{ $config->{$k} } : ( $config->{$k} );
-#
-#    ARG: for my $arg (@args) {
-#            $xml .= "  <$k";
-#            if ( $takes_arg{$k} ) {
-#                my ( $class, $v ) = ( $arg =~ m/^\ *(\S+)\ +(.+)$/ );
-#                $arg = $v;
-#                $xml .= ' type="' . $XMLer->utf8_safe($class) . '"';
-#            }
-#            $xml .= '>' . $XMLer->utf8_safe($arg) . "</$k>\n";
-#
-#        }
-#    }
+    # first convert the $config ver2 hash into a ver3 hash
+    my %conf3 = (
+        MetaNames     => {},
+        PropertyNames => {},
+        Index         => { Format => ['Native'], },
+        MIME          => {},
+        Parsers       => {},
+    );
+
+    #warn dump $config;
+
+KEY: for my $k ( sort keys %$config ) {
+        my @args = ref $config->{$k} ? @{ $config->{$k} } : ( $config->{$k} );
+
+        #warn "$k => " . dump( \@args );
+
+        if ( $k eq 'MetaNames' ) {
+            for my $line (@args) {
+                for my $metaname ( split( m/\ +/, $line ) ) {
+                    $conf3{'MetaNames'}->{$metaname} ||= {};
+                }
+            }
+        }
+        elsif ( $k eq 'MetaNamesRank' ) {
+            for my $pair (@args) {
+                my ( $bias, $names ) = ( $pair =~ m/^([\-\d]+) +(.+)$/ );
+                for my $name ( split( m/\ +/, $names ) ) {
+                    $conf3{'MetaNames'}->{$name}->{bias} = $bias;
+                }
+            }
+        }
+        elsif ( $k eq 'MetaNameAlias' ) {
+            for my $pair (@args) {
+                my ( $name, $aliases ) = ( $pair =~ m/^(\S+) +(.+)$/ );
+                for my $alias ( split( m/\ +/, $aliases ) ) {
+                    $conf3{'MetaNames'}->{$alias}->{alias_for} = $name;
+                }
+            }
+        }
+        elsif ( $k eq 'PropertyNames' ) {
+            for my $line (@args) {
+                for my $name ( split( m/\ +/, $line ) ) {
+                    $conf3{'PropertyNames'}->{$name} ||= {};
+                }
+            }
+        }
+        elsif ( $k eq 'PropertyNamesCompareCase' ) {
+            for my $line (@args) {
+                for my $name ( split( m/\ +/, $line ) ) {
+                    $conf3{'PropertyNames'}->{$name}->{ignore_case} = 0;
+                }
+            }
+        }
+        elsif ( $k eq 'PropertyNamesIgnoreCase' ) {
+            for my $line (@args) {
+                for my $name ( split( m/\ +/, $line ) ) {
+                    $conf3{'PropertyNames'}->{$name}->{ignore_case} = 1;
+                }
+            }
+        }
+        elsif ( $k eq 'PropertyNamesNoStripChars' ) {
+            for my $line (@args) {
+                for my $name ( split( m/\ +/, $line ) ) {
+                    $conf3{'PropertyNames'}->{$name}->{verbatim} = 1;
+                }
+            }
+        }
+        elsif ( $k eq 'PropertyNamesNumeric' ) {
+            for my $line (@args) {
+                for my $name ( split( m/\ +/, $line ) ) {
+                    $conf3{'PropertyNames'}->{$name}->{type} = 'int';
+                }
+            }
+        }
+        elsif ( $k eq 'PropertyNamesDate' ) {
+            for my $line (@args) {
+                for my $name ( split( m/\ +/, $line ) ) {
+                    $conf3{'PropertyNames'}->{$name}->{type} = 'date';
+                }
+            }
+        }
+        elsif ( $k eq 'PropertyNameAlias' ) {
+            for my $pair (@args) {
+                my ( $name, $aliases ) = ( $pair =~ m/^(\S+) +(.+)$/ );
+                for my $alias ( split( m/\ +/, $aliases ) ) {
+                    $conf3{'PropertyNames'}->{$alias}->{alias_for} = $name;
+                }
+            }
+        }
+        elsif ( $k eq 'PropertyNamesMaxLength' ) {
+            for my $pair (@args) {
+                my ( $max, $names ) = ( $pair =~ m/^([\d]+) +(.+)$/ );
+                for my $name ( split( m/\ +/, $names ) ) {
+                    $conf3{'PropertyNames'}->{$name}->{max} = $max;
+                }
+            }
+        }
+        elsif ( $k eq 'PropertyNamesSortKeyLength' ) {
+            for my $pair (@args) {
+                my ( $len, $names ) = ( $pair =~ m/^([\d]+) +(.+)$/ );
+                for my $name ( split( m/\ +/, $names ) ) {
+                    $conf3{'PropertyNames'}->{$name}->{sort_length} = $len;
+                }
+            }
+        }
+        elsif ( $k eq 'PreSortedIndex' ) {
+            for my $line (@args) {
+                for my $name ( split( m/\ +/, $line ) ) {
+                    $conf3{'PropertyNames'}->{$name}->{sort} = 1;
+                }
+            }
+        }
+
+        # TODO how does libswish3 handle this?
+        elsif ( $k eq 'StoreDescription' ) {
+
+        }
+
+        elsif ( $k eq 'IndexContents' ) {
+            for my $line (@args) {
+                my ( $parser_type, $file_ext )
+                    = ( $line =~ m/^(XML|HTML|TXT)\*? +(.+)$/ );
+
+                if ( !exists $parser_map{$parser_type} ) {
+                    warn "Unsupported Parser type: $parser_type\n";
+                    next;
+                }
+
+                for my $ext ( split( m/\ +/, $file_ext ) ) {
+                    $ext =~ s/^\.//;
+                    my $mime
+                        = SWISH::Prog::Utils->mime_type( "null.$ext", $ext )
+                        || $parser_map{$parser_type};
+                    if (    exists $conf3{Parsers}->{$parser_type}
+                        and exists $conf3{Parsers}->{$parser_type}->{$mime} )
+                    {
+                        warn
+                            "parser type $parser_type already defined for $mime\n";
+                        next;
+                    }
+                    if ( exists $parser_map{$parser_type}
+                        and $parser_map{$parser_type} eq $mime )
+                    {
+
+                        # already a default
+                        next;
+                    }
+                    $conf3{Parsers}->{$parser_type}->{$mime} = $ext;
+                    if ( exists $conf3{MIME}->{$ext} ) {
+                        warn "file extension '$ext' already defined\n";
+                        next;
+                    }
+                    $conf3{MIME}->{$ext} = $mime;
+                }
+            }
+        }
+        elsif ( exists $remap{$k} ) {
+            push( @{ $conf3{ $remap{$k} } }, @args );
+        }
+        elsif ( $k =~ m/^Index(\w+)/ ) {
+            my $tag = $1;
+            push( @{ $conf3{'Index'}->{$tag} }, join( ' ', @args ) );
+        }
+
+        else {
+            push( @{ $conf3{$k} }, @args );
+        }
+
+    }
+
+    # now convert %conf3 to XML
+
+    # deal with these special cases separately
+    my $metas   = delete $conf3{'MetaNames'};
+    my $props   = delete $conf3{'PropertyNames'};
+    my $index   = delete $conf3{'Index'};
+    my $mimes   = delete $conf3{'MIME'};
+    my $parsers = delete $conf3{'Parsers'};
+
+    for my $k ( sort keys %conf3 ) {
+        my $key = to_utf8($k);
+        for my $v ( @{ $conf3{$k} } ) {
+            my $val  = $XML->escape( to_utf8($v) );
+            my $note = '';
+            if ( exists $unsupported{$key} ) {
+                $note = $disclaimer;
+                $note =~ s/CONFIG/$key/;
+            }
+            $xml .= " $note<$key>$val</$key>\n";
+        }
+    }
+
+    if ( keys %$metas ) {
+        $xml .= " <MetaNames>\n";
+        for my $name ( sort keys %$metas ) {
+            my $uname = to_utf8($name);
+            $xml .= sprintf( "  <%s />\n",
+                $self->_make_tag( $uname, $metas->{$name} ) );
+        }
+        $xml .= " </MetaNames>\n";
+    }
+    if ( keys %$props ) {
+        $xml .= " <PropertyNames>\n";
+        for my $name ( sort keys %$props ) {
+            my $uname = to_utf8($name);
+            $xml .= sprintf( "  <%s />\n",
+                $self->_make_tag( $uname, $props->{$name} ) );
+        }
+        $xml .= " </PropertyNames>\n";
+    }
+
+    $xml .= " <Index>\n";
+    for my $tag ( sort keys %$index ) {
+        for my $val ( @{ $index->{$tag} } ) {
+            $xml .= sprintf( "  <%s>%s</%s>\n", $tag, $XML->escape($val),
+                $tag );
+        }
+    }
+    $xml .= " </Index>\n";
+
+    if ( keys %$mimes ) {
+        $xml .= " <MIME>\n";
+        for my $ext ( sort keys %$mimes ) {
+            my $mime = $mimes->{$ext};
+            $xml .= sprintf( "  <%s>%s</%s>\n",
+                $XML->tag_safe($ext), $XML->escape($mime),
+                $XML->tag_safe($ext) );
+        }
+        $xml .= " </MIME>\n";
+    }
+
+    if ( keys %$parsers ) {
+        $xml .= " <Parsers>\n";
+        for my $parser ( sort keys %$parsers ) {
+            for my $mime ( sort keys %{ $parsers->{$parser} } ) {
+                $xml .= sprintf( "  <%s>%s</%s>\n",
+                    $XML->tag_safe($parser),
+                    $XML->escape($mime), $XML->tag_safe($parser) );
+            }
+        }
+        $xml .= " </Parsers>\n";
+    }
 
     $xml .= "</swish>\n";
 
     return $xml;
 
+}
+
+sub _make_tag {
+    my ( $self, $tag, $attrs ) = @_;
+    return $XML->tag_safe($tag) . $XML->attr_safe($attrs);
+}
+
+sub AUTOLOAD {
+    my $self   = shift;
+    my $method = our $AUTOLOAD;
+    $method =~ s/.*://;
+    return if $method eq 'DESTROY';
+    if ( !exists $Opts{$method} ) {
+        croak("method '$method' not implemented in $self");
+    }
+    if (@_) {
+        return $self->_set( $method, @_ );
+    }
+    else {
+        return $self->_get($method);
+    }
 }
 
 1;

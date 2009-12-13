@@ -6,8 +6,10 @@ use base qw( SWISH::Prog::Aggregator );
 use Carp;
 use File::Slurp;
 use File::Find;
+use File::Spec;
+use Data::Dump qw( dump );
 
-our $VERSION = '0.31';
+our $VERSION = '0.32';
 
 =pod
 
@@ -97,6 +99,9 @@ sub file_ok {
     $stat ||= [ stat($full_path) ];
     return 0 unless -r _;
     return 0 if -d _;
+    return 0
+        if ( $self->_apply_file_rules($full_path)
+        && !$self->_apply_file_match($full_path) );
 
     $self->debug and warn "  $full_path -> ok\n";
 
@@ -116,14 +121,123 @@ sub dir_ok {
     my $self = shift;
     my $dir  = shift;
     my $stat = shift || [ stat($dir) ];
+
+    $self->debug and warn "checking dir $dir\n";
+
     return 0 unless -d _;
     return 0 if $dir =~ m!/\.!;
     return 0 if $dir =~ m/^\.[^\.]/;        # could be ../foo
     return 0 if $dir =~ m!/(\.svn|RCS)/!;
+    return 0
+        if ( $self->_apply_file_rules($dir)
+        && !$self->_apply_file_match($dir) );
 
-    $self->verbose and print "$dir .. ok\n";
+    $self->debug and warn "  $dir -> ok\n";
 
     1;                                      # TODO esp RecursionDepth
+}
+
+# FileRules == exclude
+# FileMatch == include
+my $FileRuleRegEx
+    = qr/^(filename|pathname|dirname|directory|title)\ +(contains|is|regex)\ +(.+)/io;
+
+sub _parse_file_rule {
+    my ( $self, $text ) = @_;
+
+    # memoize
+    return $self->{_file_rules}->{$text}
+        if exists $self->{_file_rules}->{$text};
+
+    # parse
+    my ( $type, $action, $re ) = ( $text =~ m/$FileRuleRegEx/ );
+    if ( !$type or !$action or !$re ) {
+        croak "Bad syntax in FileRule: $text";
+    }
+    my $applies;
+    if ( $type =~ m/^dir/ ) {
+        $applies = 'dir';
+    }
+    elsif ( $type eq 'filename' ) {
+        $applies = 'file';
+    }
+    elsif ( $type eq 'pathname' ) {
+        $applies = 'path';
+    }
+    elsif ( $type eq 'title' ) {
+        $applies = 'title';
+    }
+    else {
+
+        # can't get here if regex matched in the first place...
+        croak "Bad FileRule type: $type";
+    }
+    my $rule = {
+        applies_to => $applies,
+        type       => $type,
+        action     => $action,
+        re         => $re,
+    };
+
+    # cache
+    $self->{_file_rules}->{$text} = $rule;
+    return $rule;
+}
+
+sub _apply_file_rule {
+    my ( $self, $file, $rule ) = @_;
+    my $skip = 0;
+    my ( $volume, $dirname, $filename ) = File::Spec->splitpath($file);
+
+    $self->debug and warn dump $rule;
+    $self->debug and warn "dirname=$dirname   filename=$filename";
+
+    if ( $rule->{action} eq 'is' ) {
+        $skip = $rule->{re} eq $filename ? 1 : 0;
+    }
+    elsif ( $rule->{action} eq 'contains' ) {
+        if ( $filename =~ m{$rule->{re}} ) {
+            $skip = 1;
+        }
+    }
+    elsif ( $rule->{action} eq 'regex' ) {
+        my $regex = $rule->{re};
+        $regex =~ s/^.|.$//;    # strip delimiter
+        if ( $filename =~ m{$regex} ) {
+            $skip = 1;
+        }
+    }
+
+    $self->debug and warn "FileRule for $file returns $skip";
+
+    return $skip;
+}
+
+sub _apply_file_rules {
+    my ( $self, $file ) = @_;
+    if ( $self->config->FileRules ) {
+        $self->debug and warn "applying FileRules";
+        my $rules = $self->config->FileRules;
+
+        #warn dump $rules;
+        for my $line (@$rules) {
+            my $rule = $self->_parse_file_rule($line);
+            if ( $rule->{applies_to} eq 'dir' and -d $file ) {
+                return $self->_apply_file_rule( $file, $rule );
+            }
+            elsif ( $rule->{applies_to} eq 'file' and -f $file ) {
+                return $self->_apply_file_rule( $file, $rule );
+            }
+        }
+    }
+    return 0;    # no rules
+}
+
+sub _apply_file_match {
+    my ( $self, $file ) = @_;
+
+    # TODO
+    return 0;    # no-op for now
 }
 
 =head2 get_doc( I<file_path> [, I<stat>, I<ext> ] )
@@ -179,7 +293,7 @@ sub _do_file {
         $self->{indexer}->process($doc);
     }
     else {
-        $self->debug and warn "skipping $file\n";
+        $self->debug and warn "skipping file $file\n";
     }
 }
 
@@ -222,12 +336,12 @@ sub crawl {
                             return;
                         }
 
-                        #warn "$path\n";
+                        #warn "-d $path\n";
                         return;
                     }
                     else {
 
-                        #warn "$path\n";
+                        #warn "!-d $path\n";
                     }
 
                     $self->_do_file($path);

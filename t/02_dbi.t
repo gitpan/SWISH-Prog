@@ -54,7 +54,7 @@ SKIP: {
     ok( my $aggr = SWISH::Prog::Aggregator::DBI->new(
             db      => $dbh,
             indexer => SWISH::Prog::Native::Indexer->new(
-                invindex => 't/dbi_index',
+                invindex => 't/dbi.index',
             ),
             schema => {
                 foo => {
