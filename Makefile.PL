@@ -37,7 +37,7 @@ my %recommended = (
 
 my %optional = (
     'YAML::Syck' => '0.72',
-    'JSON::XS'   => 2.2222,
+    'JSON'       => 2.0,
     'Mail::Box'  => 0,
     'DBI'        => 0,
 );

@@ -7,12 +7,13 @@ use SWISH::Prog::Utils;
 use SWISH::Filter;
 use SWISH::Prog::Doc;
 use Scalar::Util qw( blessed );
+use Data::Dump qw( dump );
 
-our $VERSION = '0.32';
+our $VERSION = '0.33';
 
 __PACKAGE__->mk_accessors(
-    qw( set_parser_from_type indexer doc_class swish_filter_obj ));
-__PACKAGE__->mk_ro_accessors(qw( config count ));
+    qw( set_parser_from_type indexer doc_class swish_filter_obj test_mode ));
+__PACKAGE__->mk_ro_accessors(qw( count ));
 
 =pod
 
@@ -82,6 +83,11 @@ Default is SWISH::Prog::Doc.
 
 A SWISH::Filter object. If not passed in new() one is created for you.
 
+=item test_mode
+
+Dry run mode, just prints info on stderr but does not
+build index.
+
 =back
 
 =cut
@@ -90,14 +96,14 @@ sub init {
     my $self = shift;
     $self->SUPER::init(@_);
     $self->{verbose} ||= 0;
+
     if (   !$self->{indexer}
         or !blessed( $self->{indexer} )
         or !$self->{indexer}->isa('SWISH::Prog::Indexer') )
     {
-        croak "SWISH::Prog::Indexer-derived object required";
+        croak "SWISH::Prog::Indexer-derived object required to crawl()";
     }
 
-    $self->{config} = $self->{indexer}->config;
     $self->{doc_class} ||= 'SWISH::Prog::Doc';
     $self->{swish_filter_obj} ||= SWISH::Filter->new;
 
@@ -109,8 +115,14 @@ sub init {
 
 =head2 config
 
-Returns the SWISH::Prog::Config object being used. This is a read-only
-method (accessor not mutator).
+Returns the SWISH::Prog::Config object from the Indexer
+being used. This is a read-only method (accessor not mutator).
+
+=cut
+
+sub config {
+    return shift->{indexer}->config;
+}
 
 =head2 count
 

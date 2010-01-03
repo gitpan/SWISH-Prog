@@ -9,9 +9,9 @@ use Scalar::Util qw( blessed );
 use SWISH::Prog::Config;
 use SWISH::Prog::InvIndex;
 
-our $VERSION = '0.32';
+our $VERSION = '0.33';
 
-__PACKAGE__->mk_accessors(qw( aggregator ));
+__PACKAGE__->mk_accessors(qw( aggregator test_mode ));
 
 # each $swishProg hasa aggregator, which hasa indexer and hasa invindex
 
@@ -116,10 +116,11 @@ sub init {
             croak "invalid indexer $indexer: $@";
         }
         $indexer = $indexer->new(
-            debug    => $self->debug,
-            invindex => $self->{invindex},    # may be undef
-            verbose  => $self->verbose,
-            config   => $config,              # may be undef
+            debug     => $self->debug,
+            invindex  => $self->{invindex},    # may be undef
+            verbose   => $self->verbose,
+            config    => $config,              # may be undef
+            test_mode => $self->test_mode,
         );
     }
     elsif ( !$indexer->isa('SWISH::Prog::Indexer') ) {
@@ -140,9 +141,10 @@ sub init {
             croak "invalid aggregator $aggregator: $@";
         }
         $aggregator = $aggregator->new(
-            indexer => $indexer,
-            debug   => $self->debug,
-            verbose => $self->verbose
+            indexer   => $indexer,
+            debug     => $self->debug,
+            verbose   => $self->verbose,
+            test_mode => $self->test_mode,
         );
     }
     elsif ( !$aggregator->isa('SWISH::Prog::Aggregator') ) {
@@ -155,6 +157,11 @@ sub init {
 
     $self->{aggregator} = $aggregator;
     $self->{indexer}    = $indexer;
+
+    $indexer->{test_mode} = $self->{test_mode}
+        unless exists $indexer->{test_mode};
+    $aggregator->{test_mode} = $self->{test_mode}
+        unless exists $aggregator->{test_mode};
 
     $self->debug and carp dump $self;
 
@@ -248,6 +255,14 @@ use the aggregator's count() method.
 sub count {
     shift->indexer->count;
 }
+
+=head2 test_mode
+
+Dry run mode, just prints info on stderr but does not
+build index. This flag is set in new() and passed to
+the indexer and aggregator.
+
+=cut
 
 1;
 

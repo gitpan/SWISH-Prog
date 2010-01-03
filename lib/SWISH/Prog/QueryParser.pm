@@ -5,7 +5,7 @@ use base qw( Search::Tools::QueryParser );
 use Carp;
 use SWISH::Prog::Query;
 
-our $VERSION = '0.32';
+our $VERSION = '0.33';
 
 __PACKAGE__->mk_accessors(
     qw(

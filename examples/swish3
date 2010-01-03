@@ -73,18 +73,19 @@ version: $VERSION
 };
 
 my $Opt = {
-    verbose  => 0,
-    Version  => 0,
-    Debug    => 0,
-    config   => '',              #SWISH::Prog::Config->new
-    Warnings => 2,
-    Source   => 'fs',
-    Format   => 'native',
-    query    => '',
-    input    => 0,
-    folder   => 'index.swish',
-    begin    => 0,
-    max      => undef,
+    verbose   => 0,
+    Version   => 0,
+    Debug     => 0,
+    config    => '',                      #SWISH::Prog::Config->new
+    Warnings  => 2,
+    Source    => 'fs',
+    Format    => 'native',
+    query     => '',
+    input     => 0,
+    folder    => 'index.swish',
+    begin     => 0,
+    max       => undef,
+    test_mode => $ENV{SWISH_TEST} || 0,
 };
 
 my %allopts = (
@@ -100,6 +101,7 @@ my %allopts = (
     'begin=i'             => 'begin results [0]',
     'max=i'               => 'max results [all]',
     'Version'             => 'print Version',
+    'test_mode'           => 'set with SWISH_TEST env var',
 );
 
 GetOptions( $Opt, keys %allopts ) or die $USAGE;
@@ -118,7 +120,9 @@ $Opt->{invindex} = $Opt->{folder};
 
 $Opt->{debug} and Data::Dump::dump $Opt;
 
-$ENV{SWISH_WARNINGS} = $Opt->{Warnings};
+if ( !exists $ENV{SWISH_WARNINGS} ) {
+    $ENV{SWISH_WARNINGS} = $Opt->{Warnings};
+}
 
 my %prog_can;
 for ( keys %$Opt ) {
@@ -132,7 +136,7 @@ if ( $Opt->{input} ) {
     my $num_docs = $prog->index(@ARGV);
     my $end      = time();
     my $elapsed  = $end - $start;
-    printf("%d documents in %s\n", $num_docs, secs2hms($elapsed));
+    printf( "%d documents in %s\n", ( $num_docs || 0 ), secs2hms($elapsed) );
 }
 elsif ( $Opt->{query} ) {
     my $invindex = $prog->invindex;

@@ -3,11 +3,10 @@ use strict;
 use warnings;
 use Carp;
 use Data::Dump qw( dump );
-use MIME::Types;
 use File::Basename;
 use Search::Tools::XML;
 
-our $VERSION = '0.32';
+our $VERSION = '0.33';
 
 =pod
 
@@ -58,13 +57,31 @@ our %ParserTypes = (
 );
 
 # cache to avoid hitting MIME::Type each time
-my %ext2mime = ();
+my %ext2mime = (
+    doc  => 'application/msword',
+    pdf  => 'application/pdf',
+    ppt  => 'application/vnd.ms-powerpoint',
+    html => 'text/html',
+    htm  => 'text/html',
+    txt  => 'text/plain',
+    text => 'text/plain',
+    xml  => 'application/xml',
+    mp3  => 'audio/mpeg',
+    gz   => 'application/x-gzip',
+    xls  => 'application/vnd.ms-excel',
+    zip  => 'application/zip',
+
+);
 
 # prime the cache with some typical defaults that MIME::Type won't match.
 $ext2mime{'php'} = 'text/html';
 
-my $mime_types = MIME::Types->new;
-my $XML        = Search::Tools::XML->new;
+eval { require MIME::Types };
+my $mime_types;
+if ( !$@ ) {
+    $mime_types = MIME::Types->new;
+}
+my $XML = Search::Tools::XML->new;
 
 =head1 METHODS
 
@@ -79,11 +96,12 @@ path_parts() and then fed to MIME::Types.
 sub mime_type {
     my $self = shift;
     my $url  = shift or return;
-    my $ext  = shift || ( $self->path_parts($url) )[2];
+    my $ext  = lc( shift || ( $self->path_parts($url) )[2] );
+    $ext =~ s/^\.//;
     $ext ||= 'html';
 
     #warn "$url => $ext";
-    if ( !exists $ext2mime{$ext} ) {
+    if ( !exists $ext2mime{$ext} and $mime_types ) {
 
         # cache the mime type as a string
         # to avoid the MIME::Type::type() stringification

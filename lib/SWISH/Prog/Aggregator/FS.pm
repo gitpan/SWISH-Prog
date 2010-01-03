@@ -9,7 +9,7 @@ use File::Find;
 use File::Spec;
 use Data::Dump qw( dump );
 
-our $VERSION = '0.32';
+our $VERSION = '0.33';
 
 =pod
 
@@ -57,7 +57,7 @@ sub init {
     if ( $self->config->IndexOnly ) {
         my $re = join( '|',
             grep {s/^\.//} split( m/\s+/, $self->config->IndexOnly ) );
-        $self->{_ext_re} = qr{($re)}io;
+        $self->{_ext_re} = qr{\.($re)}io;
     }
     else {
         $self->{_ext_re} = $SWISH::Prog::Utils::ExtRE;
@@ -254,8 +254,10 @@ sub get_doc {
 
     # the SWISH::3->slurp is about 50% faster
     # but obviously only available if SWISH::3 is loaded.
+    # NOTE we always read in binary (raw) mode in case
+    # the file is compressed, binary, etc.
     if ( $self->{_swish3} ) {
-        eval { $buf = $self->{_swish3}->slurp($url) };
+        eval { $buf = $self->{_swish3}->slurp( $url, 1 ) };
     }
     else {
         eval { $buf = read_file( $url, binmode => ':raw' ) };
@@ -290,7 +292,12 @@ sub _do_file {
     if ( my $ext = $self->file_ok($file) ) {
         my $doc = $self->get_doc( $file, [ stat(_) ], $ext );
         $self->swish_filter($doc);
-        $self->{indexer}->process($doc);
+        if ( $self->test_mode ) {
+            warn join( ' ', $doc->url, $doc->type ) . "\n";
+        }
+        else {
+            $self->{indexer}->process($doc);
+        }
     }
     else {
         $self->debug and warn "skipping file $file\n";

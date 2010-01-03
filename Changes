@@ -125,4 +125,11 @@ Revision history for Perl extension Prog.
           per Prog instance
         * refactor internal handling of Config to support SWISH::3::Config
         * FileRules support now in Aggregator::FS
+
+0.33    02 Jan 2010
+        * fix bug where SWISH::3->slurp was being called with out binmode flag
+          and .gz files were getting their NUL bytes stripped.
+        * add test_mode feature (set with SWISH_TEST env var)
+        * fix some memory leaks
+        * fix JSON::XS dependency (JSON required, not JSON::XS).
  

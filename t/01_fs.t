@@ -20,7 +20,8 @@ SKIP: {
 
     # skip our local config test files
     $config->FileRules('dirname contains config');
-    
+    $config->FileRules( 'filename is swish.xml', 1 );
+
     ok( my $invindex
             = SWISH::Prog::Native::InvIndex->new( path => 't/testindex', ),
         "new invindex"
@@ -36,6 +37,7 @@ SKIP: {
     ok( my $aggregator = SWISH::Prog::Aggregator::FS->new(
             indexer => $indexer,
             config  => $config,
+
             #verbose => 1,
             #debug   => 1,
         ),
@@ -44,15 +46,16 @@ SKIP: {
 
     ok( my $prog = SWISH::Prog->new(
             aggregator => $aggregator,
+
             #verbose    => 1,
-            config     => $config,
+            config => $config,
         ),
         "new program"
     );
 
     ok( $prog->run('t/'), "run program" );
 
-    is( $prog->count, 6, "indexed test docs" );
+    is( $prog->count, 5, "indexed test docs" );
 
     # clean up header so other test counts work
     unlink('t/testindex/swish.xml') unless $ENV{PERL_DEBUG};

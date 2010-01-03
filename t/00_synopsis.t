@@ -28,11 +28,12 @@ SKIP: {
     );
 
     # skip our local config test files
-    $program->config->FileRules('dirname contains config');
+    $program->config->FileRules( 'dirname contains config', 1 );
+    $program->config->FileRules( 'filename is swish.xml',   1 );
 
     ok( $program->run('t/'), "run program" );
 
-    is( $program->count, 6, "indexed test docs" );
+    is( $program->count, 5, "indexed test docs" );
 
     # clean up header so other test counts work
     unlink('t/testindex/swish.xml') unless $ENV{PERL_DEBUG};

@@ -7,9 +7,10 @@ use Carp;
 use Data::Dump qw( dump );
 use SWISH::Prog::Config;
 
-our $VERSION = '0.32';
+our $VERSION = '0.33';
 
-__PACKAGE__->mk_accessors(qw( invindex config count clobber flush started ));
+__PACKAGE__->mk_accessors(
+    qw( invindex config count clobber flush started test_mode ));
 
 =pod
 
@@ -68,6 +69,11 @@ should be written to disk.
 
 A SWISH::Prog::InvIndex object.
 
+=item test_mode
+
+Dry run mode, just prints info on stderr but does not
+build index.
+
 =back
 
 =head2 init
@@ -80,12 +86,14 @@ sub init {
     my $self = shift;
     $self->SUPER::init(@_);
     if (    exists $self->{config}
+        and defined $self->{config}
         and !blessed( $self->{config} )
         and $self->{config} !~ m/<swish>|\.xml$/ )
     {
         $self->{config}
             = $self->verify_isa_swish_prog_config( $self->{config} );
     }
+    $self->{config} ||= SWISH::Prog::Config->new;
     return $self;
 }
 

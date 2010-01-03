@@ -11,7 +11,7 @@ use overload(
 
 use SWISH::Prog::Headers;
 
-our $VERSION = '0.32';
+our $VERSION = '0.33';
 
 __PACKAGE__->mk_accessors(
     qw( url modtime type parser content action size charset data ));
