@@ -11,10 +11,12 @@ use overload(
 
 use SWISH::Prog::Headers;
 
-our $VERSION = '0.33';
+our $VERSION = '0.34';
 
 __PACKAGE__->mk_accessors(
-    qw( url modtime type parser content action size charset data ));
+    qw( url modtime type parser content action size charset data version ));
+
+my $default_version = $ENV{SWISH3} ? 3 : 2;
 
 my ( $locale, $lang, $charset );
 {
@@ -100,6 +102,11 @@ All of the following params are also available as accessors/mutators.
 
 =item data
 
+=item version
+
+Swish-e 2.x or Swish3 style headers. Value should be C<2> or C<3>.
+Default is C<2>.
+
 =back
 
 =cut
@@ -114,6 +121,7 @@ sub init {
     my $self = shift;
     $self->SUPER::init(@_);
     $self->{charset} ||= $charset;
+    $self->{version} ||= $default_version;
     $self->filter();
     return $self;
 }
@@ -157,7 +165,8 @@ sub as_string {
             modtime => $self->modtime,
             type    => $self->type,
             action  => $self->action,
-            parser  => $self->parser
+            parser  => $self->parser,
+            version => $self->version,
         }
     ) . $self->content;
 

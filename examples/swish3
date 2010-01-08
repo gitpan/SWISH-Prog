@@ -8,7 +8,7 @@ use Carp;
 use SWISH::Prog;
 use Getopt::Long qw(:config no_ignore_case);
 
-my $VERSION = '3.0.1';
+my $VERSION = '3.0.2';
 
 my $USAGE = qq{$0 
  usage:
@@ -130,8 +130,8 @@ for ( keys %$Opt ) {
         $prog_can{$_} = $Opt->{$_};
     }
 }
-my $prog = SWISH::Prog->new(%prog_can);
 if ( $Opt->{input} ) {
+    my $prog = SWISH::Prog->new(%prog_can);
     my $start    = time();
     my $num_docs = $prog->index(@ARGV);
     my $end      = time();
@@ -139,7 +139,7 @@ if ( $Opt->{input} ) {
     printf( "%d documents in %s\n", ( $num_docs || 0 ), secs2hms($elapsed) );
 }
 elsif ( $Opt->{query} ) {
-    my $invindex = $prog->invindex;
+    my $invindex = SWISH::Prog::InvIndex->new( path => $Opt->{invindex} );
     my $meta     = $invindex->meta;
     my $format   = $meta->Index->{Format};
     my $sclass   = "SWISH::Prog::${format}::Searcher";
@@ -147,7 +147,7 @@ elsif ( $Opt->{query} ) {
     croak $@ if $@;
     my $searcher = $sclass->new(
         invindex => $invindex->path . '',
-        config   => $prog->config,
+        config   => $meta,
     );
     my $results = $searcher->search(
         $Opt->{query},
