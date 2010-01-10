@@ -9,7 +9,7 @@ use SWISH::Prog::Native::Result;
 
 __PACKAGE__->mk_accessors(qw( swish sao_opts result_class ));
 
-our $VERSION = '0.34';
+our $VERSION = '0.35';
 
 =head1 NAME
 
@@ -68,7 +68,9 @@ Returns a SWISH::API::Object::Results object.
 
 sub search {
     my $self = shift;
-    return $self->{swish}->query(@_);
+    my $query = shift or croak "query required";
+    my $opts  = shift || {};
+    return $self->{swish}->query($query);
 }
 
 1;

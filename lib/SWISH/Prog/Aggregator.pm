@@ -9,10 +9,10 @@ use SWISH::Prog::Doc;
 use Scalar::Util qw( blessed );
 use Data::Dump qw( dump );
 
-our $VERSION = '0.34';
+our $VERSION = '0.35';
 
 __PACKAGE__->mk_accessors(
-    qw( set_parser_from_type indexer doc_class swish_filter_obj test_mode ));
+    qw( set_parser_from_type indexer doc_class swish_filter_obj test_mode filter ));
 __PACKAGE__->mk_ro_accessors(qw( count ));
 
 =pod
@@ -88,13 +88,20 @@ A SWISH::Filter object. If not passed in new() one is created for you.
 Dry run mode, just prints info on stderr but does not
 build index.
 
+=item filter
+
+Value should be a CODE ref. This is passed through to set_filter();
+there is no C<filter> mutator method.
+
 =back
 
 =cut
 
 sub init {
     my $self = shift;
-    $self->SUPER::init(@_);
+    my %arg  = @_;
+    my $filter = delete $arg{filter};
+    $self->SUPER::init(%arg);
     $self->{verbose} ||= 0;
 
     if (   !$self->{indexer}
@@ -107,8 +114,8 @@ sub init {
     $self->{doc_class} ||= 'SWISH::Prog::Doc';
     $self->{swish_filter_obj} ||= SWISH::Filter->new;
 
-    if ( $self->{filter} ) {
-        $self->set_filter( delete $self->{filter} );
+    if ( $filter ) {
+        $self->set_filter( $filter );
     }
 
 }

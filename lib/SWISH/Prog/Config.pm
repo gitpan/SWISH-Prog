@@ -16,7 +16,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.34';
+our $VERSION = '0.35';
 
 my $XML = Search::Tools::XML->new;
 
@@ -225,7 +225,7 @@ sub _set {
         return $self->{$key} = $val;
     }
     elsif ( exists $unique{$key} ) {
-        return $self->_name_hash(@_);
+        return $self->_name_hash( $key, $val );
     }
 
     $self->{$key} = [] unless defined $self->{$key};
@@ -550,8 +550,9 @@ sub ver2_to_ver3 {
     );
     my $disclaimer = "<!-- WARNING: CONFIG ignored by Swish3 -->\n ";
 
-    my $config = $file ? $self->new->read2($file) : $self->as_hash;
-    my $time = $no_timestamp ? '' : localtime();
+    my $class  = ref($self) || $self;
+    my $config = $file ? $class->new->read2($file) : $self->as_hash;
+    my $time   = $no_timestamp ? '' : localtime();
 
     my $xml = <<EOF;
 <?xml version="1.0" encoding="UTF-8"?>

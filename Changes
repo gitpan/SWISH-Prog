@@ -136,4 +136,10 @@ Revision history for Perl extension Prog.
 0.34    07 Jan 2009
         * fix mem leak test to include only those outside our control.
         * add version() to SWISH::Prog::Doc to pick header style per instance.
+
+0.35    09 Jan 2009
+        * fix bug in Config where $append flag was being interpreted as a MetaName/Property
+        * fix bug in Config where ver2_to_ver3 was calling $self->new instead of $class->new
+          when passed a filename.
+        * fix bug in Spider where filter was not being passed correctly.
  
