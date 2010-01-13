@@ -9,7 +9,7 @@ use SWISH::Prog::Doc;
 use Scalar::Util qw( blessed );
 use Data::Dump qw( dump );
 
-our $VERSION = '0.35';
+our $VERSION = '0.36';
 
 __PACKAGE__->mk_accessors(
     qw( set_parser_from_type indexer doc_class swish_filter_obj test_mode filter ));

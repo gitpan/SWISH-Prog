@@ -6,7 +6,9 @@ use strict;
 use warnings;
 use Carp;
 use SWISH::Prog;
+use SWISH::3;
 use Getopt::Long qw(:config no_ignore_case);
+use Data::Dump qw( dump );
 
 my $VERSION = '3.0.2';
 
@@ -66,26 +68,28 @@ my $USAGE = qq{$0
     -V : prints the current version
     -v : indexing verbosity level (0 to 3) [-v 1]
     -w : search for words "word1 word2 ..."
-    #-x : "Extended Output Format": Specify the output format.
+    -x : "Extended Output Format": Specify the output format.
 
 version: $VERSION
  docs: http://swish-e.org/swish3/
 };
 
 my $Opt = {
-    verbose   => 0,
-    Version   => 0,
-    Debug     => 0,
-    config    => '',                      #SWISH::Prog::Config->new
-    Warnings  => 2,
-    Source    => 'fs',
-    Format    => 'native',
-    query     => '',
-    input     => 0,
-    folder    => 'index.swish',
-    begin     => 0,
-    max       => undef,
-    test_mode => $ENV{SWISH_TEST} || 0,
+    verbose         => 0,
+    Version         => 0,
+    Debug           => 0,
+    config          => '',                      #SWISH::Prog::Config->new
+    Warnings        => 2,
+    Source          => 'fs',
+    Format          => 'native',
+    query           => '',
+    input           => 0,
+    folder          => 'index.swish',
+    begin           => 0,
+    max             => undef,
+    test_mode       => $ENV{SWISH_TEST} || 0,
+    extended_output => undef,
+    Limit           => [],
 };
 
 my %allopts = (
@@ -102,6 +106,8 @@ my %allopts = (
     'max=i'               => 'max results [all]',
     'Version'             => 'print Version',
     'test_mode'           => 'set with SWISH_TEST env var',
+    'extended_output|x=s' => 'extended output format string',
+    'Limit=s'             => 'Limit to range of values',
 );
 
 GetOptions( $Opt, keys %allopts ) or die $USAGE;
@@ -131,7 +137,7 @@ for ( keys %$Opt ) {
     }
 }
 if ( $Opt->{input} ) {
-    my $prog = SWISH::Prog->new(%prog_can);
+    my $prog     = SWISH::Prog->new(%prog_can);
     my $start    = time();
     my $num_docs = $prog->index(@ARGV);
     my $end      = time();
@@ -153,12 +159,59 @@ elsif ( $Opt->{query} ) {
         $Opt->{query},
         {   start => $Opt->{begin},
             max   => $Opt->{max},
+            limit => parse_limits( $Opt->{Limit} ),
         }
     );
+    printf("# swish3 version %s\n", $VERSION);
+    printf("# Query: %s\n", $Opt->{query});
+    printf("# Hits: %d\n", $results->hits);
+
+    my ( $output_format, $output_format_str );
+
+    if ( $Opt->{extended_output} ) {
+        my @props;
+        my $default_properties = SWISH::3::SWISH_DOC_PROP_MAP();
+        while ( $Opt->{extended_output} =~ m/<(.+?)>/g ) {
+            my $p = $1;
+            if (    !exists $meta->PropertyNames->{$p}
+                and !exists $default_properties->{$p} )
+            {
+                croak "Invalid PropertyName: $p";
+            }
+            else {
+                push @props, $p;
+            }
+        }
+        $output_format_str = $Opt->{extended_output};
+        for my $prop (@props) {
+            $output_format_str =~ s/<$prop>/\%s/g;    # TODO ints and dates
+        }
+
+        # make escaped chars work
+        $output_format_str =~ s/\\n/\n/g;
+        $output_format_str =~ s/\\t/\t/g;
+        $output_format_str =~ s/\\r/\r/g;
+
+        $output_format = \@props;
+
+        #warn "str: $output_format_str\n";
+        #warn dump $output_format;
+    }
 
     while ( my $result = $results->next ) {
-        printf( qq{%4d %s "%s"\n},
-            $result->score, $result->uri, $result->title );
+        if ($output_format) {
+            my @res;
+            for my $prop (@$output_format) {
+                my $val = $result->get_property($prop);
+                $val =~ s/\003/\\x{03}/g;
+                push( @res, $val );
+            }
+            printf( $output_format_str, @res );
+        }
+        else {
+            printf( qq{%4d %s "%s"\n},
+                $result->score, $result->uri, $result->title );
+        }
     }
 }
 elsif ( $Opt->{Version} ) {
@@ -176,6 +229,19 @@ sub secs2hms {
     my $min   = int( $rm / 60 );
     my $sec   = $rm % 60;
     return sprintf( "%02d:%02d:%02d", $hours, $min, $sec );
+}
+
+sub parse_limits {
+    my $limits = shift or return;
+    if ( !@$limits ) {
+        return $limits;
+    }
+    my @parsed;
+    for my $lim (@$limits) {
+        push @parsed, [ split( /\s+/, $lim ) ];
+    }
+    return \@parsed;
+
 }
 
 =pod

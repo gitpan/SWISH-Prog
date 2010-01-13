@@ -1,122 +1,77 @@
 use strict;
 use warnings;
-use ExtUtils::MakeMaker;
+use inc::Module::Install;
 use 5.008003;
 
-my $MM_Version = $ExtUtils::MakeMaker::VERSION;
+name 'SWISH-Prog';
+all_from 'lib/SWISH/Prog.pm';
+requires 'Search::Tools'      => '0.30';
+requires 'File::Basename'     => 0;
+requires 'MIME::Types'        => 0;
+requires 'Path::Class'        => 0;
+requires 'SWISH::Filter'      => '0.09';
+requires 'Rose::ObjectX::CAF' => 0;        # Search::Tools also requires this
+requires 'File::Temp'         => 0;
+requires 'Data::Dump'         => 0;        # Search::Tools also requires this
+requires 'Config::General'    => '2.31';
+requires 'Scalar::Util'       => 0;
+requires 'Test::More'         => 0;
+requires 'File::Slurp'        => 0;        # Search::Tools also requires this
+requires 'XML::Simple'        => 0;
 
-if ( $MM_Version =~ /_/ )    # dev version
-{
-    $MM_Version = eval $MM_Version;
-    die $@ if ($@);
-}
+# recommended Aggregator support
 
-my %required = (
-    'Search::Tools'      => '0.30',
-    'File::Basename'     => 0,
-    'MIME::Types'        => 0,
-    'Path::Class'        => 0,
-    'SWISH::Filter'      => '0.09',
-    'Rose::ObjectX::CAF' => 0,        # Search::Tools also requires this
-    'File::Temp'         => 0,
-    'Data::Dump'         => 0,        # Search::Tools also requires this
-    'Config::General'    => '2.31',
-    'Scalar::Util'       => 0,
-    'Test::More'         => 0,
-    'File::Slurp'        => 0,        # Search::Tools also requires this
-    'XML::Simple'        => 0,
-);
+# FF should be part of base install just like Carp
+recommends 'File::Find'         => 0;
+recommends 'WWW::Mechanize'     => 0;
+recommends 'URI'                => 0;
+recommends 'SWISH::API::Object' => 0.12;     # native searcher requires
+recommends 'YAML::Syck'         => '0.72';
+recommends 'JSON'               => 2.0;
+recommends 'Mail::Box'          => 0;
+recommends 'DBI'                => 0;
 
-my %recommended = (
+requires_external_bin 'swish-e';
 
-    'File::Find'     => 0,    # should be part of base install just like Carp
-    'WWW::Mechanize' => 0,
-    'URI'            => 0,
-    'SWISH::API::Object' => 0.12,    # native searcher requires
-);
+WriteAll;
 
-my %optional = (
-    'YAML::Syck' => '0.72',
-    'JSON'       => 2.0,
-    'Mail::Box'  => 0,
-    'DBI'        => 0,
-);
-
-my %extra;
-
-# ask which of the optional modules should be installed
-for my $class ( sort keys %recommended ) {
-    my $vers = $recommended{$class};
-    if ($vers) {
-        eval "use $class $vers";
-    }
-    else {
-        eval "use $class";
-    }
-    if ($@) {
-        my $reply
-            = prompt( "$class is recommended. Add it to CPAN install list?",
-            'yes' );
-        if ( $reply =~ m/^y/i ) {
-            $extra{$class} = $vers;
-        }
-    }
-}
-for my $class ( sort keys %optional ) {
-    my $vers = $optional{$class};
-    if ($vers) {
-        eval "use $class $vers";
-    }
-    else {
-        eval "use $class";
-    }
-    if ($@) {
-        my $reply
-            = prompt( "$class is optional. Add it to CPAN install list?",
-            'no' );
-        if ( $reply =~ m/^y/i ) {
-            $extra{$class} = $vers;
-        }
-    }
-}
-
-WriteMakefile(
-    NAME          => 'SWISH::Prog',
-    VERSION_FROM  => 'lib/SWISH/Prog.pm',
-    AUTHOR        => q{Peter Karman <karman@cpan.org>},
-    PREREQ_PM     => { %required, %extra, },
-    ABSTRACT_FROM => 'lib/SWISH/Prog.pm',
-    PL_FILES      => {},
-    dist          => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
-    clean         => {
-        FILES => join(
-            ' ',
-            qw(
-                t/dbi.index
-                t/swishobjects
-                t/testindex
-                t/object.index
-                t/xapian.index
-                t/index.swish
-                t/spider.index
-                t/mail.index
-                )
-        )
-    },
-    ( $MM_Version >= 6.48 ? ( MIN_PERL_VERSION => '5.8.3' ) : () ),
-    ( $MM_Version >= 6.31 ? ( LICENSE          => 'perl' )  : () ),
-    (   $MM_Version <= 6.44
-        ? ()
-        : ( META_MERGE => {
-                resources => {
-                    license  => 'http://dev.perl.org/licenses/',
-                    homepage => 'http://dev.swish-e.org/wiki/perl',
-                    bugtracker =>
-                        'http://rt.cpan.org/NoAuth/Bugs.html?Dist=SWISH-Prog',
-                    repository => 'http://svn.swish-e.org/perl/SWISH-Prog/',
-                },
-            }
-        )
-    ),
-
-);
+#WriteMakefile(
+#    NAME          => 'SWISH::Prog',
+#    VERSION_FROM  => 'lib/SWISH/Prog.pm',
+#    AUTHOR        => q{Peter Karman <karman@cpan.org>},
+#    PREREQ_PM     => { %required, %extra, },
+#    ABSTRACT_FROM => 'lib/SWISH/Prog.pm',
+#    PL_FILES      => {},
+#    dist          => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
+#    clean         => {
+#        FILES => join(
+#            ' ',
+#            qw(
+#                t/dbi.index
+#                t/swishobjects
+#                t/testindex
+#                t/object.index
+#                t/xapian.index
+#                t/index.swish
+#                t/spider.index
+#                t/mail.index
+#                )
+#        )
+#    },
+#    ( $MM_Version >= 6.48 ? ( MIN_PERL_VERSION => '5.8.3' ) : () ),
+#    ( $MM_Version >= 6.31 ? ( LICENSE          => 'perl' )  : () ),
+#    (   $MM_Version <= 6.44
+#        ? ()
+#        : ( META_MERGE => {
+#                resources => {
+#                    license  => 'http://dev.perl.org/licenses/',
+#                    homepage => 'http://dev.swish-e.org/wiki/perl',
+#                    bugtracker =>
+#                        'http://rt.cpan.org/NoAuth/Bugs.html?Dist=SWISH-Prog',
+#                    repository => 'http://svn.swish-e.org/perl/SWISH-Prog/',
+#                },
+#            }
+#        )
+#    ),
+#
+#);

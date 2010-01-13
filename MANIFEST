@@ -1,6 +1,15 @@
 Changes
 examples/swish3
 examples/swishagr
+inc/Module/Install.pm
+inc/Module/Install/Base.pm
+inc/Module/Install/Can.pm
+inc/Module/Install/External.pm
+inc/Module/Install/Fetch.pm
+inc/Module/Install/Makefile.pm
+inc/Module/Install/Metadata.pm
+inc/Module/Install/Win32.pm
+inc/Module/Install/WriteAll.pm
 lib/SWISH/Prog.pm
 lib/SWISH/Prog/Aggregator.pm
 lib/SWISH/Prog/Aggregator/DBI.pm
@@ -30,6 +39,7 @@ lib/SWISH/Prog/Searcher.pm
 lib/SWISH/Prog/Utils.pm
 Makefile.PL
 MANIFEST
+META.yml
 README
 t/00_synopsis.t
 t/01_fs.t
@@ -73,4 +83,3 @@ t/test.pdf
 t/test.pdf.gz
 t/test.xml
 t/test2.html
-META.yml                                 Module meta-data (added by MakeMaker)

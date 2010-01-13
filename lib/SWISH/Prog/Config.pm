@@ -16,7 +16,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.35';
+our $VERSION = '0.36';
 
 my $XML = Search::Tools::XML->new;
 
@@ -550,9 +550,9 @@ sub ver2_to_ver3 {
     );
     my $disclaimer = "<!-- WARNING: CONFIG ignored by Swish3 -->\n ";
 
-    my $class  = ref($self) || $self;
+    my $class = ref($self) || $self;
     my $config = $file ? $class->new->read2($file) : $self->as_hash;
-    my $time   = $no_timestamp ? '' : localtime();
+    my $time = $no_timestamp ? '' : localtime();
 
     my $xml = <<EOF;
 <?xml version="1.0" encoding="UTF-8"?>
@@ -674,10 +674,17 @@ KEY: for my $k ( sort keys %$config ) {
                 }
             }
         }
-
-        # TODO how does libswish3 handle this?
         elsif ( $k eq 'StoreDescription' ) {
-
+            for my $line (@args) {
+                my ( $parser_type, $tag, $len )
+                    = ( $line =~ m/^(XML|HTML|TXT)[2\*]? +<(.+?)> ?(\d*)$/ );
+                if (!$tag) {
+                    warn "unparsed config2 line for StoreDescription: $line";
+                    next;
+                }
+                $conf3{'PropertyNames'}->{$tag}->{alias_for}
+                    = 'swishdescription';
+            }
         }
 
         elsif ( $k eq 'IndexContents' ) {

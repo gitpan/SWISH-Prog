@@ -6,10 +6,10 @@ use_ok('SWISH::Prog::Native::Indexer');
 
 SKIP: {
 
-    eval "use YAML::Syck";
+    eval "use JSON";
     if ($@) {
-        diag "install YAML::Syck to test Object aggregator";
-        skip "YAML::Syck required for Object test", 14;
+        diag "install JSON to test Object aggregator";
+        skip "JSON required for Object test", 14;
     }
     eval "use SWISH::Prog::Aggregator::Object";
     if ($@) {

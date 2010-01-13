@@ -142,4 +142,10 @@ Revision history for Perl extension Prog.
         * fix bug in Config where ver2_to_ver3 was calling $self->new instead of $class->new
           when passed a filename.
         * fix bug in Spider where filter was not being passed correctly.
- 
+
+0.36    12 Jan 2009
+        * fix Config bug where StoreDescription was ignored in ver2_to_ver3()
+        * switch to Module::Install 
+        * updates to example/swish3
+        * fix t/03_object.t to test for JSON not YAML::Syck (see RT#53275)
+
