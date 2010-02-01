@@ -149,3 +149,14 @@ Revision history for Perl extension Prog.
         * updates to example/swish3
         * fix t/03_object.t to test for JSON not YAML::Syck (see RT#53275)
 
+0.37    01 Feb 2010
+        * add -D '\x03' to the Native::Indexer exec command. This mimics libswish3.
+        * examples/swish3 now installed by default with usual make install.
+        * added -N option to swish3, along with ok_if_newer_than feature in Aggregator.
+        * added dependency on Rose::DateTime.
+        * Native Indexer can now merge() and add().
+        * -l and -M options now supported in swish3
+        * yank Query.pm and QueryParser.pm. They weren't used and the idea is now fleshed
+          out in Search::Query if we ever need it.
+        * Searcher may now take an array of invindex values, and always returns an array ref of values.
+

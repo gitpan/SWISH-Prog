@@ -4,19 +4,14 @@ use warnings;
 use base qw( SWISH::Prog::Class );
 use Carp;
 use Scalar::Util qw( blessed );
-use SWISH::Prog::QueryParser;
 
-our $VERSION = '0.36';
+our $VERSION = '0.37';
 
 __PACKAGE__->mk_accessors(
     qw(
-        query
         sort_order
         max_hits
-        query_class
-        query_parser
         invindex
-        config
         ),
 );
 
@@ -28,11 +23,8 @@ SWISH::Prog::Searcher - base searcher class
 
  my $searcher = SWISH::Prog::Searcher->new(
                     invindex        => 'path/to/index',
-                    query_class     => 'SWISH::Prog::Query',
-                    query_parser    => $swish_prog_queryparser,
-                    config          => $swish_prog_config,
-                    max_hits        => 100,
-                    sort_order      => 'swishrank',
+                    max_hits        => 1000,
+                    sort_order      => 'score',
                 );
                 
  my $results = $searcher->search( 'foo bar' );
@@ -52,30 +44,21 @@ returning results from a SWISH::Prog::InvIndex.
 
 Overrides base method.
 
-=head2 config
-
-A SWISH::Prog::Config object. Required. Set in new().
-
 =head2 invindex
 
 A SWISH::Prog::InvIndex object or directory path. Required. Set in new().
+
+May be a single value or an array ref of values (for searching multiple
+indexes at once).
 
 =head2 max_hits
 
 The maximum number of hits to return. Optional. Default is 1000.
 
-=head2 query_class
-
-Default is C<SWISH::Prog::Query>.
-
-=head2 query_parser
-
-A SWISH::Prog::QueryParser object. Optional. Set in new().
-
 =head2 sort_order
 
 The order in which Results will be sorted. Default is descending
-by C<swishrank>.
+by C<score>.
 
 =cut
 
@@ -83,41 +66,33 @@ sub init {
     my $self = shift;
     $self->SUPER::init(@_);
 
-    # set defaults
-    $self->{query_class} ||= 'SWISH::Prog::Query';
+    $self->{max_hits} ||= 1000;
 
     # set up invindex
     if ( !$self->{invindex} ) {
         croak "invindex required";
     }
-    if ( !blessed( $self->{invindex} ) ) {
 
-        # assume a InvIndex in the same namespace as $self
-        my $class = ref($self);
-        $class =~ s/::Searcher$/::InvIndex/;
-        eval "require $class";
-        croak $@ if $@;
-        $self->{invindex}
-            = $class->new( path => $self->{invindex}, clobber => 0 );
-
-        #warn "new invindex in $class";
-
-    }
-    $self->{invindex}->open_ro;
-
-    # set up config
-    # TODO why do we need this?
-    # TODO read from invindex/swish.(xml|conf) ?
-    if ( !$self->{config} ) {
-        croak "config required";
+    # force into an array
+    if ( ref $self->{invindex} ne 'ARRAY' ) {
+        $self->{invindex} = [ $self->{invindex} ];
     }
 
-    $self->{query_parser} ||= SWISH::Prog::QueryParser->new(
-        query_class => $self->{query_class},
-        config      => $self->{config},
-    );
+    for my $invindex ( @{ $self->{invindex} } ) {
+        if ( !blessed($invindex) ) {
 
-    $self->{max_hits} ||= 1000;
+            # assume a InvIndex in the same namespace as $self
+            my $class = ref($self);
+            $class =~ s/::Searcher$/::InvIndex/;
+            eval "require $class";
+            croak $@ if $@;
+            $invindex = $class->new( path => $invindex, clobber => 0 );
+
+            #warn "new invindex in $class";
+
+        }
+        $invindex->open_ro;
+    }
 
     return $self;
 }
@@ -130,49 +105,6 @@ Returns a SWISH::Prog::Results object.
 
 sub search {
     croak "you must override search() in your subclass";
-}
-
-=head2 check_query( I<query> )
-
-Utility method, intended to be called from search().
-
-Example:
-
- sub search {
-     my $self = shift;
-     my $args = $self->check_query(@_);
-     # $self->query now guaranteed to contain a Query object.
- }
-
-=cut
-
-sub check_query {
-    my $self = shift;
-    my %args;
-    my $query;
-    if ( @_ == 1 ) {
-        $query = shift;
-    }
-    else {
-        %args  = @_;
-        $query = delete $args{query};
-    }
-
-    if ( !$query ) {
-        croak "query required";
-    }
-
-    if ( ref $query and !$query->isa( $self->{query_class} ) ) {
-        croak
-            "query must inherit from $self->{query_class} or you must set query_class";
-    }
-    elsif ( !ref $query ) {
-        $query = $self->{query_parser}->parse($query);
-    }
-
-    $self->{query} = $query;
-
-    return \%args;
 }
 
 1;

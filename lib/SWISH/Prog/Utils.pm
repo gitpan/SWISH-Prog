@@ -6,7 +6,7 @@ use Data::Dump qw( dump );
 use File::Basename;
 use Search::Tools::XML;
 
-our $VERSION = '0.36';
+our $VERSION = '0.37';
 
 =pod
 

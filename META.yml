@@ -7,8 +7,8 @@ build_requires:
 configure_requires:
   ExtUtils::MakeMaker: 6.42
 distribution_type: module
-generated_by: 'Module::Install version 0.91'
-license: perl
+generated_by: 'Module::Install version 0.92'
+license: http://dev.perl.org/licenses/
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
@@ -35,6 +35,7 @@ requires:
   File::Temp: 0
   MIME::Types: 0
   Path::Class: 0
+  Rose::DateTime: 0
   Rose::ObjectX::CAF: 0
   SWISH::Filter: 0.09
   Scalar::Util: 0
@@ -43,5 +44,8 @@ requires:
   XML::Simple: 0
   perl: 5.8.3
 resources:
+  bugtracker: http://rt.cpan.org/NoAuth/Bugs.html?Dist=SWISH-Prog
+  homepage: http://dev.swish-e.org/wiki/perl
   license: http://dev.perl.org/licenses/
-version: 0.36
+  repository: http://svn.swish-e.org/perl/SWISH-Prog/
+version: 0.37

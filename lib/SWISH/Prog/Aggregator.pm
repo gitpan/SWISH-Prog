@@ -9,10 +9,18 @@ use SWISH::Prog::Doc;
 use Scalar::Util qw( blessed );
 use Data::Dump qw( dump );
 
-our $VERSION = '0.36';
+our $VERSION = '0.37';
 
 __PACKAGE__->mk_accessors(
-    qw( set_parser_from_type indexer doc_class swish_filter_obj test_mode filter ));
+    qw(
+        set_parser_from_type
+        indexer
+        doc_class
+        swish_filter_obj
+        test_mode filter
+        ok_if_newer_than
+        )
+);
 __PACKAGE__->mk_ro_accessors(qw( count ));
 
 =pod
@@ -93,13 +101,23 @@ build index.
 Value should be a CODE ref. This is passed through to set_filter();
 there is no C<filter> mutator method.
 
+=item ok_if_newer_than
+
+Value should be a Unix timestamp (epoch seconds). Default is undef.
+If set, aggregators should skip files that have a modification time
+older than the timestamp.
+
+You may get/set the ok_if_newer_than value with the ok_if_newer_than()
+attribute method, but use set_ok_if_newer_than() to include validation
+of the supplied I<timestamp> value.
+
 =back
 
 =cut
 
 sub init {
-    my $self = shift;
-    my %arg  = @_;
+    my $self   = shift;
+    my %arg    = @_;
     my $filter = delete $arg{filter};
     $self->SUPER::init(%arg);
     $self->{verbose} ||= 0;
@@ -114,8 +132,8 @@ sub init {
     $self->{doc_class} ||= 'SWISH::Prog::Doc';
     $self->{swish_filter_obj} ||= SWISH::Filter->new;
 
-    if ( $filter ) {
-        $self->set_filter( $filter );
+    if ($filter) {
+        $self->set_filter($filter);
     }
 
 }
@@ -240,6 +258,23 @@ sub set_filter {
     }
 
 }
+
+=head2 set_ok_if_newer_than( I<timestamp> )
+
+Set the ok_if_newer_than attribute. I<timestamp> should be a Unix
+epoch value.
+
+=cut
+
+sub set_ok_if_newer_than {
+    my $self = shift;
+    my $ts = shift || 0;
+    if ( $ts =~ m/\D/ ) {
+        croak "timestamp should be an integer";
+    }
+    $self->ok_if_newer_than($ts);
+}
+
 1;
 
 __END__

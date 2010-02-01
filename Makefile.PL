@@ -10,6 +10,7 @@ requires 'File::Basename'     => 0;
 requires 'MIME::Types'        => 0;
 requires 'Path::Class'        => 0;
 requires 'SWISH::Filter'      => '0.09';
+requires 'Rose::DateTime'     => 0;
 requires 'Rose::ObjectX::CAF' => 0;        # Search::Tools also requires this
 requires 'File::Temp'         => 0;
 requires 'Data::Dump'         => 0;        # Search::Tools also requires this
@@ -33,45 +34,30 @@ recommends 'DBI'                => 0;
 
 requires_external_bin 'swish-e';
 
-WriteAll;
+perl_version '5.8.3';
+license 'http://dev.perl.org/licenses/';
+homepage 'http://dev.swish-e.org/wiki/perl';
+bugtracker 'http://rt.cpan.org/NoAuth/Bugs.html?Dist=SWISH-Prog';
+repository 'http://svn.swish-e.org/perl/SWISH-Prog/';
 
-#WriteMakefile(
-#    NAME          => 'SWISH::Prog',
-#    VERSION_FROM  => 'lib/SWISH/Prog.pm',
-#    AUTHOR        => q{Peter Karman <karman@cpan.org>},
-#    PREREQ_PM     => { %required, %extra, },
-#    ABSTRACT_FROM => 'lib/SWISH/Prog.pm',
-#    PL_FILES      => {},
-#    dist          => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
-#    clean         => {
-#        FILES => join(
-#            ' ',
-#            qw(
-#                t/dbi.index
-#                t/swishobjects
-#                t/testindex
-#                t/object.index
-#                t/xapian.index
-#                t/index.swish
-#                t/spider.index
-#                t/mail.index
-#                )
-#        )
-#    },
-#    ( $MM_Version >= 6.48 ? ( MIN_PERL_VERSION => '5.8.3' ) : () ),
-#    ( $MM_Version >= 6.31 ? ( LICENSE          => 'perl' )  : () ),
-#    (   $MM_Version <= 6.44
-#        ? ()
-#        : ( META_MERGE => {
-#                resources => {
-#                    license  => 'http://dev.perl.org/licenses/',
-#                    homepage => 'http://dev.swish-e.org/wiki/perl',
-#                    bugtracker =>
-#                        'http://rt.cpan.org/NoAuth/Bugs.html?Dist=SWISH-Prog',
-#                    repository => 'http://svn.swish-e.org/perl/SWISH-Prog/',
-#                },
-#            }
-#        )
-#    ),
-#
-#);
+install_script 'examples/swish3';
+
+WriteMakefile(
+    PL_FILES => {},
+    dist     => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
+    clean    => {
+        FILES => join(
+            ' ',
+            qw(
+                t/dbi.index
+                t/swishobjects
+                t/testindex
+                t/object.index
+                t/xapian.index
+                t/index.swish
+                t/spider.index
+                t/mail.index
+                )
+        )
+    }
+);

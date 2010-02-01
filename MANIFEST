@@ -5,11 +5,10 @@ inc/Module/Install.pm
 inc/Module/Install/Base.pm
 inc/Module/Install/Can.pm
 inc/Module/Install/External.pm
-inc/Module/Install/Fetch.pm
 inc/Module/Install/Makefile.pm
+inc/Module/Install/MakeMaker.pm
 inc/Module/Install/Metadata.pm
-inc/Module/Install/Win32.pm
-inc/Module/Install/WriteAll.pm
+inc/Module/Install/Scripts.pm
 lib/SWISH/Prog.pm
 lib/SWISH/Prog/Aggregator.pm
 lib/SWISH/Prog/Aggregator/DBI.pm
@@ -30,8 +29,6 @@ lib/SWISH/Prog/Native/Indexer.pm
 lib/SWISH/Prog/Native/InvIndex.pm
 lib/SWISH/Prog/Native/Result.pm
 lib/SWISH/Prog/Native/Searcher.pm
-lib/SWISH/Prog/Query.pm
-lib/SWISH/Prog/QueryParser.pm
 lib/SWISH/Prog/Queue.pm
 lib/SWISH/Prog/Result.pm
 lib/SWISH/Prog/Results.pm
@@ -48,11 +45,11 @@ t/03_object.t
 t/04_mail.t
 t/05_spider.t
 t/06_config.t
-t/07_queryparser.t
 t/08_meta.t
 t/09_xml.t
 t/10_config.t
 t/11-leak-test.t
+t/12-merge.t
 t/config2/complex.conf
 t/config2/example1.config
 t/config2/example2.config

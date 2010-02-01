@@ -7,8 +7,9 @@ use File::Temp ();
 use SWISH::Prog::Native::InvIndex;
 use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
+use File::Copy ();
 
-our $VERSION = '0.36';
+our $VERSION = '0.37';
 
 my $invindex_class = 'SWISH::Prog::Native::InvIndex';
 
@@ -142,7 +143,8 @@ sub start {
     my $opts  = $self->opts || '';
     my $exe   = $self->exe;
 
-    my $cmd = shift || "$exe $opts -f $index -v$v -W$w -S prog -i stdin";
+    my $cmd = shift
+        || "$exe $opts -f $index -D '\\x03' -v$v -W$w -S prog -i stdin";
 
     if ( !$self->config->file ) {
         $self->config->write2( 0, 1 );    # write in prog mode
@@ -215,40 +217,49 @@ sub finish {
 
     }
 
+    # destroy fh, in case close() didn't do it.
+    $self->fh(undef);
+
     # write header
     $self->config->write3(
         $self->invindex->path->file('swish.xml')->stringify );
 
 }
 
-=head2 merge( @I<SWISH::Prog::Native::InvIndex objects> )
+=head2 merge( @I<InvIndex objects> )
 
-merge() will merge @I<SWISH::Prog::Index::Native objects>
-together with the index named in the calling object.
+merge() will merge @I<SWISH::Prog::Native::InvIndex objects>
+together with the index named in the calling Indexer object.
 
-Returns the $indexer object on success, 0 on failure.
-
- # TODO fix this
+Returns the $indexer object on success, croaks on failure.
  
 =cut
 
 sub merge {
     my $self = shift;
     if ( !@_ ) {
-        croak "merge() requires some indexes to work with";
+        croak "merge() requires some InvIndex objects to work with";
     }
 
-    # we want a collection of filenames to work with
+    my $invindex_class = blessed( $self->invindex );
+
+    # we want a collection of path names to work with
     my @names;
     for (@_) {
-        if ( ref($_) && $_->isa(__PACKAGE__) ) {
-            push( @names, $_->name );
+        if ( blessed($_) and $_->isa($invindex_class) ) {
+            push( @names, $_->file->stringify );
         }
-        elsif ( ref($_) ) {
-            croak "$_ is not a " . __PACKAGE__ . " object";
+        elsif ( -s $_ ) {
+            push( @names, "$_" );    # force whatever it is to stringify
         }
         else {
-            push( @names, $_ );
+            croak "$_ is not a InvIndex object or a file path";
+        }
+    }
+
+    for (@names) {
+        if ( !-s ) {
+            croak "$_ appears to be empty: $!";
         }
     }
 
@@ -256,45 +267,60 @@ sub merge {
         carp "Likely too many indexes to merge at one time!"
             . "Your OS may have an open file limit.";
     }
-    my $m = join( ' ', @names );
-    my $i = $self->name    || 'index.swish-e'; # TODO different default name??
-    my $v = $self->verbose || 0;
-    my $w    = $self->warnings || 0;           # suffer the peril!
-    my $opts = $self->opts     || '';
-    my $exe  = $self->exe      || 'swish-e';
+    my $to_merge     = join( ' ', @names, $self->invindex->file );
+    my $current_path = $self->invindex->path;
+    my $verbose      = $self->verbose || 0;
+    my $opts         = $self->opts || '';
+    my $exe          = $self->exe || 'swish-e';
 
     # we can't replace the index in-place
     # so we create a new temp index, then mv() back
-    my $tmp     = $self->new( name => File::Temp->new->filename );
-    my $tmpname = $tmp->name;
-    my $cmd     = "$exe $opts -v$v -W$w -M $i $m $tmpname 2>&1";
-
-    my $config_file = $self->config->file;
-    if ($config_file) {
-        $cmd .= ' -c ' . $config_file;
-    }
+    my $tmpindex = $invindex_class->new(
+        path => $current_path->parent->subdir('tmpmerge.index') );
+    $tmpindex->path->mkpath( $self->debug );
+    my $cmd = "$exe $opts -v$verbose -M $to_merge $tmpindex/index.swish-e";
 
     $self->debug and carp "opening: $cmd";
 
-    $| = 1;
+    local $| = 1;
 
     open( SWISH, "$cmd  |" )
-        or croak "merge() failed: $!\n";
+        or croak "can't start merge: $!\n";
 
     while (<SWISH>) {
-        print STDERR $_ if $self->debug;
+        if ( $verbose or $self->debug ) {
+            print STDERR $_;
+        }
     }
 
-    close(SWISH) or croak "can't close merge(): $cmd: $!\n";
+    close(SWISH) or croak "can't close merge(): $cmd: $! ($?)\n";
 
-    $tmp->mv( $self->name ) or croak "mv() of temp merge index failed";
+    # assume that the swish.xml header file is the same for
+    # all the merged files, and preserve this one.
+    my $header = $current_path->file('swish.xml')->stringify;
+    File::Copy::copy( $header, $tmpindex->path->file('swish.xml')->stringify )
+        or croak "copy $header -> $tmpindex failed: $!";
+
+    # archive the existing just in case
+    my $archive = "$current_path.$$";
+    File::Copy::move( $current_path, $archive )
+        or croak "move $current_path -> $archive failed: $!";
+
+    if ( !File::Copy::move( $tmpindex, $current_path ) ) {
+        carp "move $tmpindex -> $current_path failed: $!";
+        carp "restoring original index $current_path";
+        File::Copy::move( $archive, $current_path )
+            or croak "move $archive -> $current_path failed: $!";
+    }
+    Path::Class::dir($archive)->rmtree
+        or croak "failed to rmtree $archive: $!";
 
     return $self;
 }
 
-=head2 process( I<$doc> )
+=head2 process( I<doc> )
 
-process() will parse and index I<$doc>. I<$doc> should be a 
+process() will parse and index I<doc>. I<doc> should be a 
 SWISH::Prog::Doc instance.
 
 Will croak() on failure.
@@ -304,6 +330,7 @@ Will croak() on failure.
 sub process {
     my $self = shift;
     my $doc  = $self->SUPER::process(@_);
+    $doc->version(2);
 
     print { $self->fh } $doc
         or croak "failed to print to filehandle " . $self->fh . ": $!\n";
@@ -315,7 +342,17 @@ sub process {
 
 Add I<doc> to the index.
 
- # TODO fix
+Note this is slower than merge(). If you have multiple I<doc> objects,
+create a new Indexer object and process() them all, then merge() the two
+InvIndex objects.
+
+ my $indexer = SWISH::Prog::Native::Indexer->new(invindex => 'tmpmerge');
+ $indexer->start;
+ for my $doc (@list_of_docs) {
+     $indexer->process($doc);
+ }
+ $indexer->finish;
+ $indexer->merge( 'path/to/other/index' );
  
 =cut
 
@@ -326,35 +363,27 @@ sub add {
         croak "$doc is not a SWISH::Prog::Doc object";
     }
 
-    # it would be nice if the btree flag was accessible somehow via
-    # swish-e or the API.
-    # instead, we rely on the user to set it in $self->format
+    # create a temporary invindex of $doc
+    my $invindex_class = blessed( $self->invindex );
+    my $tmpdir = Path::Class::dir( File::Temp::tempdir( CLEANUP => 1 ) );
+    my $tmpinvindex = $invindex_class->new( path => $tmpdir );
 
-    if ( $self->format eq 'native2' ) {
-        my $tmp = $self->new(
-            name     => File::Temp->new->filename,
-            config   => $self->config,
-            verbose  => $self->verbose,
-            warnings => $self->warnings
-        );
-        $tmp->run;
-        print { $tmp->fh } $doc
-            or croak "failed to print to filehandle " . $tmp->fh . ": $!\n";
+    # spawn a new indexer with similar attributes
+    my $indexer = blessed($self)->new(
+        verbose  => $self->verbose,
+        debug    => $self->debug,
+        invindex => $tmpinvindex,
+        config   => $self->config,
+    );
+    $indexer->start;
+    $indexer->process($doc);
+    $indexer->finish;
 
-        $self->merge($tmp)
-            or croak "failed to merge " . $tmp->name . " with " . $self->name;
+    # merge it
+    $self->merge($tmpinvindex);
 
-        $tmp->rm or carp "error cleaning up tmp index";
-
-    }
-    elsif ( $self->format eq 'btree2' ) {
-
-        # TODO
-        croak $self->format . " format is not currently supported.";
-    }
-    else {
-        croak $self->format . " format is not currently supported.";
-    }
+    # remove temp invindex
+    $tmpdir->rmtree or croak "failed to clean up temp invindex $tmpdir: $!";
 
     return $self;
 }

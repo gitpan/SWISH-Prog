@@ -9,7 +9,7 @@ use SWISH::Prog::Native::Result;
 
 __PACKAGE__->mk_accessors(qw( swish sao_opts result_class ));
 
-our $VERSION = '0.36';
+our $VERSION = '0.37';
 
 =head1 NAME
 
@@ -39,8 +39,8 @@ sub init {
     $self->SUPER::init(@_);
 
     $self->{swish} = SWISH::API::Object->new(
-        indexes => [ $self->{invindex}->file ],
-        class   => $self->{result_class} || 'SWISH::Prog::Native::Result',
+        indexes => [ map { $_->file } @{ $self->{invindex} } ],
+        class => $self->{result_class} || 'SWISH::Prog::Native::Result',
         @{ $self->{sao_opts} || [] }
     );
 
@@ -67,9 +67,12 @@ Returns a SWISH::API::Object::Results object.
 =cut
 
 sub search {
-    my $self = shift;
+    my $self  = shift;
     my $query = shift or croak "query required";
     my $opts  = shift || {};
+
+    # TODO use $opts
+
     return $self->{swish}->query($query);
 }
 

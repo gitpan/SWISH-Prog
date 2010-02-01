@@ -1,7 +1,7 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 #
-# SWISH::Prog-based swish3 example
-
+# SWISH::Prog-based Swish3 implementation
+#
 use strict;
 use warnings;
 use Carp;
@@ -9,8 +9,9 @@ use SWISH::Prog;
 use SWISH::3;
 use Getopt::Long qw(:config no_ignore_case);
 use Data::Dump qw( dump );
+use Rose::DateTime::Util qw(parse_date);
 
-my $VERSION = '3.0.2';
+my $VERSION = '3.0.3';
 
 my $USAGE = qq{$0 
  usage:
@@ -20,24 +21,26 @@ my $USAGE = qq{$0
           [-m num] [-t str] [-d delim] [-H (num)] [-x output_format] \
           [-R rank_scheme] [-L prop low high]
     swish3 -k (char|*) [-f invindex1 invindex2 ...]
-    swish3 -M invindex1 invindex2 ... outputfile
-    swish3 -N /path/to/compare/file
+    swish3 -M invindex1 ... outputfile
+    swish3 -N path/to/compare/file or date
     swish3 -V
+    swish3 -h
 
  options: defaults are in brackets
  # commented options are not yet supported
  
  indexing options:
-    -c : configuration file(s)
-    -D  : Debug mode
-    -f : invindex dir to create or search from [index.swish]
+    -c : configuration file
+    -D : Debug mode
+    -f : invindex dir to create or search from [index.swish3]
     -F : next param is invindex format (ks, xapian, native, or dbi) [native]
     -i : create an index from the specified files
         for "-S fs" - specify a list of files or directories
         for "-S spider" - specify a list of URLs
-    #-l : follow symbolic links when indexing
-    #-M : merges index files
-    #-N : index only files with a modification date newer than path supplied
+    -h : print this usage statement
+    -l : follow symbolic links when indexing
+    -M : merges index files
+    -N : index only files with a modification date newer than path or date
     -S : specify which aggregator to use.
         Valid options are:
          "fs" - local files in your File System
@@ -52,11 +55,12 @@ my $USAGE = qq{$0
     #-d : next param is delimiter.
     #-E : Append errors to file specified, or stderr if file not specified.
     #-e : "Economic Mode": The index proccess uses less RAM.
-    -f : invindex dir to create or search from [index.swish]
+    -f : invindex dir to create or search from [index.swish3]
     -F : next param is invindex format (ks, xapian, native, or dbi) [native]
+    -h : print this usage statement
     #-H : "Result Header Output": verbosity (0 to 9)  [1].
     #-k : Print words starting with a given char.
-    #-L : Limit results to a range of property values
+    -L : Limit results to a range of property values
     -m : the maximum number of results to return [defaults to all results]
     #-P : next param is Phrase delimiter.
     #-p : include these document properties in the output "prop1 prop2 ..."
@@ -70,12 +74,15 @@ my $USAGE = qq{$0
     -w : search for words "word1 word2 ..."
     -x : "Extended Output Format": Specify the output format.
 
-version: $VERSION
- docs: http://swish-e.org/swish3/
+      swish3 version : $VERSION
+SWISH::Prog::VERSION : $SWISH::Prog::VERSION
+                docs : http://swish-e.org/swish3/
+
 };
 
 my $Opt = {
-    verbose         => 0,
+    help            => 0,
+    verbose         => undef,
     Version         => 0,
     Debug           => 0,
     config          => '',                      #SWISH::Prog::Config->new
@@ -84,15 +91,19 @@ my $Opt = {
     Format          => 'native',
     query           => '',
     input           => 0,
-    folder          => 'index.swish',
+    folder          => 'index.swish3',
     begin           => 0,
     max             => undef,
     test_mode       => $ENV{SWISH_TEST} || 0,
     extended_output => undef,
     Limit           => [],
+    newer_than      => undef,
+    links           => 0,
+    Merge           => undef,
 };
 
 my %allopts = (
+    'help'                => 'print usage',
     'config=s'            => 'config file',
     'verbose:i'           => 'be verbose',
     'debug|Debug'         => 'debugging',
@@ -108,12 +119,19 @@ my %allopts = (
     'test_mode'           => 'set with SWISH_TEST env var',
     'extended_output|x=s' => 'extended output format string',
     'Limit=s'             => 'Limit to range of values',
+    'newer_than|N=s'      => 'index only documents newer than',
+    'links'               => 'follow symbolic links when indexing',
+    'Merge'               => 'merge 2 or more indexes',
 );
 
 GetOptions( $Opt, keys %allopts ) or die $USAGE;
 
 if ( $Opt->{Version} ) {
     print "$0 $VERSION\n";
+    exit;
+}
+if ( $Opt->{help} ) {
+    print $USAGE;
     exit;
 }
 
@@ -126,6 +144,10 @@ $Opt->{invindex} = $Opt->{folder};
 
 $Opt->{debug} and Data::Dump::dump $Opt;
 
+if ( defined $Opt->{verbose} and $Opt->{verbose} == 0 ) {
+    $Opt->{verbose} = 1;
+}
+
 if ( !exists $ENV{SWISH_WARNINGS} ) {
     $ENV{SWISH_WARNINGS} = $Opt->{Warnings};
 }
@@ -137,7 +159,31 @@ for ( keys %$Opt ) {
     }
 }
 if ( $Opt->{input} ) {
-    my $prog     = SWISH::Prog->new(%prog_can);
+    my $prog = SWISH::Prog->new(%prog_can);
+    if ( $Opt->{newer_than} ) {
+
+        # if it's a file, stat it,
+        # otherwise convert to timestamp
+        my $ts;
+        my $dt = parse_date( $Opt->{newer_than} );
+        if ( !defined $dt ) {
+            my $stat = [ stat( $Opt->{newer_than} ) ];
+            if ( !defined $stat->[9] ) {
+                croak
+                    "-N option must be a valid date string or a readable file: $!";
+            }
+            $ts = $stat->[9];
+        }
+        else {
+            $ts = $dt->epoch;
+        }
+        $prog->aggregator->set_ok_if_newer_than($ts);
+        printf "Skipping documents older than %s\n", scalar localtime($ts);
+
+    }
+    if ( $Opt->{links} and $Opt->{Source} eq 'fs' ) {
+        $prog->aggregator->follow(1);
+    }
     my $start    = time();
     my $num_docs = $prog->index(@ARGV);
     my $end      = time();
@@ -153,7 +199,6 @@ elsif ( $Opt->{query} ) {
     croak $@ if $@;
     my $searcher = $sclass->new(
         invindex => $invindex->path . '',
-        config   => $meta,
     );
     my $results = $searcher->search(
         $Opt->{query},
@@ -162,9 +207,9 @@ elsif ( $Opt->{query} ) {
             limit => parse_limits( $Opt->{Limit} ),
         }
     );
-    printf("# swish3 version %s\n", $VERSION);
-    printf("# Query: %s\n", $Opt->{query});
-    printf("# Hits: %d\n", $results->hits);
+    printf( "# swish3 version %s\n", $VERSION );
+    printf( "# Query: %s\n",         $Opt->{query} );
+    printf( "# Hits: %d\n",          $results->hits );
 
     my ( $output_format, $output_format_str );
 
@@ -214,6 +259,31 @@ elsif ( $Opt->{query} ) {
         }
     }
 }
+elsif ( $Opt->{Merge} ) {
+    my @indexes = @ARGV;
+    my $num     = scalar(@indexes);
+    if ( $num < 2 ) {
+        die "-M requires minimum of 2 arguments\n";
+    }
+    if ( $Opt->{Format} eq 'native' ) {
+        require SWISH::Prog::Native::Indexer;
+        my $target_invindex = pop(@indexes);
+        my $indexer         = SWISH::Prog::Native::Indexer->new(
+            invindex => $target_invindex,
+            debug    => $Opt->{debug},
+            verbose  => $Opt->{verbose},
+        );
+        if ( !$indexer->invindex->meta ) {
+            die "$target_invindex missing swish.xml header file";
+        }
+        $indexer->merge(
+            map { SWISH::Prog::Native::InvIndex->new( path => $_ ) }
+                @indexes );
+    }
+    else {
+        die "InvIndex Format $Opt->{Format} not supported for -M option\n";
+    }
+}
 elsif ( $Opt->{Version} ) {
     print "$0 $VERSION\n";
 }
@@ -244,7 +314,40 @@ sub parse_limits {
 
 }
 
+__END__
+
 =pod
+
+=head1 NAME
+
+swish3 - SWISH::Prog-based Swish3 implementation
+
+=head1 SYNOPSIS
+
+    swish3 [-e] [-i dir file ... ] [-S aggregator] [-c file] [-f invindex] [-l] [-v (num)]
+    swish3 -w word1 word2 ... [-f file1 file2 ...] \
+          [-P phrase_delimiter] [-p prop1 ...] [-s sortprop1 [asc|desc] ...] \
+          [-m num] [-t str] [-d delim] [-H (num)] [-x output_format] \
+          [-R rank_scheme] [-L prop low high]
+    swish3 -k (char|*) [-f invindex1 invindex2 ...]
+    swish3 -M invindex1 invindex2 ... outputfile
+    swish3 -N path/to/compare/file or date
+    swish3 -V
+
+ NOTE THAT SOME OPTIONS ARE NOT YET SUPPORTED.
+ Type:
+  % swish3 -h
+
+=head1 DESCRIPTION
+
+B<swish3> is one example of implementing the Swish3 API. B<swish3>
+is written in Perl using the SWISH::Prog framework.
+
+Type:
+
+ % swish3 -h
+
+for a complete list of options.
 
 =head1 AUTHOR
 
@@ -252,10 +355,14 @@ Peter Karman, E<lt>perl@peknet.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2009 by Peter Karman
+Copyright 2009-2010 by Peter Karman
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself. 
+it under the same terms as Perl itself.
+
+=head1 SEE ALSO
+
+http://swish-e.org/swish3/
 
 =cut
 

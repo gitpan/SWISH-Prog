@@ -4,9 +4,20 @@ use warnings;
 use base qw( SWISH::Prog::Class );
 
 __PACKAGE__->mk_accessors(
-    qw( swishdocpath swishlastmodified swishtitle swishdescription swishrank ));
+    qw(
+        swishdocpath
+        swishlastmodified
+        swishtitle
+        swishdescription
+        swishrank
+        swishdbfile
+        swishdocsize
+        swishreccount
+        swishfilenum
+        )
+);
 
-our $VERSION = '0.36';
+our $VERSION = '0.37';
 
 =head1 NAME
 
@@ -54,6 +65,14 @@ Alias for swishrank().
 =head2 swishdescription 
 
 =head2 swishrank
+
+=head2 swishdbfile
+
+=head2 swishdocsize
+
+=head2 swishreccount
+
+=head2 swishfilenum
 
 =cut
 
