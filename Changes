@@ -160,3 +160,8 @@ Revision history for Perl extension Prog.
           out in Search::Query if we ever need it.
         * Searcher may now take an array of invindex values, and always returns an array ref of values.
 
+0.38    05 Feb 2010
+        * add support for 'order', 'limit', 'start', 'max' and 'rank_scheme' in Native::Searcher.
+        * Utils->perl_to_xml() moved to Search::Tools::XML (where it really belonged).
+        * enable more options to swish3
+

@@ -4,7 +4,7 @@ use warnings;
 use base qw( SWISH::Prog::Class );
 use Carp;
 
-our $VERSION = '0.37';
+our $VERSION = '0.38';
 
 __PACKAGE__->mk_accessors(qw( doc score ));
 
@@ -69,10 +69,26 @@ sub title   { croak "must implement title" }
 sub summary { croak "must implement summary" }
 
 # version 2 names for the faithful
-*swishdocpath      = \&uri;
-*swishlastmodified = \&mtime;
-*swishtitle        = \&title;
-*swishdescription  = \&summary;
+sub swishdocpath      { shift->uri }
+sub swishlastmodified { shift->mtime }
+sub swishtitle        { shift->title }
+sub swishdescription  { shift->summary }
+
+=head2 get_property( I<property> )
+
+Returns the stored value for I<property> for this Result.
+
+The default behavior is to simply call a method called I<property>
+on the internal doc() object. Subclasses should implement per-engine
+behavior.
+
+=cut
+
+sub get_property {
+    my $self = shift;
+    my $propname = shift or croak "propname required";
+    return $self->doc->property($propname);
+}
 
 1;
 

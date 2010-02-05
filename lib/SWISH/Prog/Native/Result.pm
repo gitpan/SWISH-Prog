@@ -1,6 +1,8 @@
 package SWISH::Prog::Native::Result;
 use strict;
 use warnings;
+use Carp;
+use Data::Dump qw( dump );
 use base qw( SWISH::Prog::Class );
 
 __PACKAGE__->mk_accessors(
@@ -14,10 +16,11 @@ __PACKAGE__->mk_accessors(
         swishdocsize
         swishreccount
         swishfilenum
+        swish_result
         )
 );
 
-our $VERSION = '0.37';
+our $VERSION = '0.38';
 
 =head1 NAME
 
@@ -34,7 +37,9 @@ SWISH::API::Object results.
 
 =head1 METHODS
 
-=cut
+=head2 swish_result
+
+Returns the internal SWISH::API::More::Result object.
 
 =head2 uri
 
@@ -81,6 +86,20 @@ sub mtime   { shift->swishlastmodified }
 sub title   { shift->swishtitle }
 sub summary { shift->swishdescription }
 sub score   { shift->swishrank }
+
+=head2 get_property( I<property> )
+
+Returns the stored value for I<property> for this Result.
+
+Same as calling property().
+
+=cut
+
+sub get_property {
+    my $self = shift;
+    my $propname = shift or croak "propname required";
+    return $self->swish_result->property($propname);
+}
 
 1;
 

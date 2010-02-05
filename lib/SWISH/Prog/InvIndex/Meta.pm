@@ -5,7 +5,7 @@ use base qw( SWISH::Prog::Class );
 use Carp;
 use XML::Simple;
 
-our $VERSION = '0.37';
+our $VERSION = '0.38';
 
 __PACKAGE__->mk_accessors(qw( invindex ));
 __PACKAGE__->mk_ro_accessors(qw( file ));

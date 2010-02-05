@@ -5,7 +5,7 @@ use 5.008003;
 
 name 'SWISH-Prog';
 all_from 'lib/SWISH/Prog.pm';
-requires 'Search::Tools'      => '0.30';
+requires 'Search::Tools'      => '0.41';
 requires 'File::Basename'     => 0;
 requires 'MIME::Types'        => 0;
 requires 'Path::Class'        => 0;
@@ -26,7 +26,7 @@ requires 'XML::Simple'        => 0;
 recommends 'File::Find'         => 0;
 recommends 'WWW::Mechanize'     => 0;
 recommends 'URI'                => 0;
-recommends 'SWISH::API::Object' => 0.12;     # native searcher requires
+recommends 'SWISH::API::Object' => 0.13;     # native searcher requires
 recommends 'YAML::Syck'         => '0.72';
 recommends 'JSON'               => 2.0;
 recommends 'Mail::Box'          => 0;

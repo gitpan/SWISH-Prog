@@ -11,9 +11,9 @@ use Getopt::Long qw(:config no_ignore_case);
 use Data::Dump qw( dump );
 use Rose::DateTime::Util qw(parse_date);
 
-my $VERSION = '3.0.3';
+my $VERSION = '3.0.4';
 
-my $USAGE = qq{$0 
+my $USAGE = qq{$0
  usage:
     swish3 [-e] [-i dir file ... ] [-S aggregator] [-c file] [-f invindex] [-l] [-v (num)]
     swish3 -w word1 word2 ... [-f file1 file2 ...] \
@@ -28,7 +28,7 @@ my $USAGE = qq{$0
 
  options: defaults are in brackets
  # commented options are not yet supported
- 
+
  indexing options:
     -c : configuration file
     -D : Debug mode
@@ -45,11 +45,11 @@ my $USAGE = qq{$0
         Valid options are:
          "fs" - local files in your File System
          "spider" - web site files using a web crawler
-         #"prog"  - use the program API 
-        The default value is: "fs" 
+         #"prog"  - use the program API
+        The default value is: "fs"
     #-T : Trace options ('-T help' for info)
     -W : next param is ParserWarnLevel [-W 2]
-    
+
  search options:
     -b : begin results at this number
     #-d : next param is delimiter.
@@ -64,8 +64,8 @@ my $USAGE = qq{$0
     -m : the maximum number of results to return [defaults to all results]
     #-P : next param is Phrase delimiter.
     #-p : include these document properties in the output "prop1 prop2 ..."
-    #-R : next param is Rank Scheme number (0 to 1)  [0].
-    #-s : sort by these document properties in the output "prop1 prop2 ..."
+    -R : next param is Rank Scheme number (0 to 1)  [0].
+    -s : sort by these document properties in the output "prop1 prop2 ..."
     #-T : Trace options ('-T help' for info)
     #-t : tags to search in - specify as a string
     #    "HBthec" - in Head|Body|title|header|emphasized|comments
@@ -100,6 +100,8 @@ my $Opt = {
     newer_than      => undef,
     links           => 0,
     Merge           => undef,
+    Headers         => 1,
+    sort_order      => '',
 };
 
 my %allopts = (
@@ -122,6 +124,15 @@ my %allopts = (
     'newer_than|N=s'      => 'index only documents newer than',
     'links'               => 'follow symbolic links when indexing',
     'Merge'               => 'merge 2 or more indexes',
+    'Headers=i'           => 'Header output verbosity (native only)',
+    'RankScheme=i'        => 'ranking algorithm (native only)',
+    'sort_order=s'        => 'result sort order',
+);
+
+my %native_only_opts = (
+
+    #'Headers'    => 1,
+    'RankScheme' => 1,
 );
 
 GetOptions( $Opt, keys %allopts ) or die $USAGE;
@@ -133,6 +144,16 @@ if ( $Opt->{Version} ) {
 if ( $Opt->{help} ) {
     print $USAGE;
     exit;
+}
+
+for my $opt ( keys %$Opt ) {
+    if ( lc( $Opt->{Format} ) ne 'native'
+        and exists $native_only_opts{$opt} )
+    {
+        ( my $letter = $opt ) =~ s/^(.).+/$1/;
+        print "-$letter (--$opt) is a native-only format option\n";
+        exit 1;
+    }
 }
 
 #croak $USAGE unless @ARGV;
@@ -197,19 +218,23 @@ elsif ( $Opt->{query} ) {
     my $sclass   = "SWISH::Prog::${format}::Searcher";
     eval "require $sclass";
     croak $@ if $@;
-    my $searcher = $sclass->new(
-        invindex => $invindex->path . '',
-    );
+    my $searcher = $sclass->new( invindex => $invindex->path . '', );
     my $results = $searcher->search(
         $Opt->{query},
-        {   start => $Opt->{begin},
-            max   => $Opt->{max},
-            limit => parse_limits( $Opt->{Limit} ),
+        {   start       => $Opt->{begin},
+            max         => $Opt->{max},
+            limit       => parse_limits( $Opt->{Limit} ),
+            rank_scheme => $Opt->{RankScheme},
+            order       => $Opt->{sort_order},
         }
     );
     printf( "# swish3 version %s\n", $VERSION );
     printf( "# Query: %s\n",         $Opt->{query} );
     printf( "# Hits: %d\n",          $results->hits );
+
+    if ( $Opt->{Headers} ) {
+
+    }
 
     my ( $output_format, $output_format_str );
 
@@ -219,7 +244,9 @@ elsif ( $Opt->{query} ) {
         while ( $Opt->{extended_output} =~ m/<(.+?)>/g ) {
             my $p = $1;
             if (    !exists $meta->PropertyNames->{$p}
-                and !exists $default_properties->{$p} )
+                and !exists $default_properties->{$p}
+                and $p ne 'swishtitle'
+                and $p ne 'swishdescription' )
             {
                 croak "Invalid PropertyName: $p";
             }
@@ -243,11 +270,13 @@ elsif ( $Opt->{query} ) {
         #warn dump $output_format;
     }
 
+    my $counter = 0;
     while ( my $result = $results->next ) {
         if ($output_format) {
             my @res;
             for my $prop (@$output_format) {
                 my $val = $result->get_property($prop);
+                $val = '' unless defined $val;
                 $val =~ s/\003/\\x{03}/g;
                 push( @res, $val );
             }
@@ -256,6 +285,9 @@ elsif ( $Opt->{query} ) {
         else {
             printf( qq{%4d %s "%s"\n},
                 $result->score, $result->uri, $result->title );
+        }
+        if ( $Opt->{max} ) {
+            last if ++$counter >= $Opt->{max};
         }
     }
 }
@@ -365,4 +397,3 @@ it under the same terms as Perl itself.
 http://swish-e.org/swish3/
 
 =cut
-

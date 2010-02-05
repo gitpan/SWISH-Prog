@@ -15,7 +15,7 @@ __PACKAGE__->mk_accessors(
 
 #use LWP::Debug qw(+);
 
-our $VERSION = '0.37';
+our $VERSION = '0.38';
 
 # TODO make these configurable
 my %parser_types = %SWISH::Prog::Utils::ParserTypes;

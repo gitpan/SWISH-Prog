@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 19;
+use Test::More tests => 22;
 
 use_ok('SWISH::Prog');
 use_ok('SWISH::Prog::Native::Indexer');
@@ -24,9 +24,8 @@ SKIP: {
         "new invindex"
     );
 
-    ok( my $indexer = SWISH::Prog::Native::Indexer->new(
-            invindex => $invindex,
-        ),
+    ok( my $indexer
+            = SWISH::Prog::Native::Indexer->new( invindex => $invindex, ),
         "new indexer"
     );
 
@@ -80,15 +79,23 @@ SKIP: {
 
         eval { require SWISH::Prog::Native::Searcher; };
         if ($@) {
-            skip "Cannot test Searcher without SWISH::API", 3;
+            skip "Cannot test Searcher without SWISH::API", 6;
         }
-        ok( my $searcher = SWISH::Prog::Native::Searcher->new(
-                invindex => $invindex,
-            ),
+        ok( my $searcher
+                = SWISH::Prog::Native::Searcher->new( invindex => $invindex,
+                ),
             "new searcher"
         );
-        ok( my $results = $searcher->search('foo or words'), "do search" );
+        ok( my $results = $searcher->search(
+                'foo or words', { order => 'swishdocpath ASC' }
+            ),
+            "do search"
+        );
         is( $results->hits, 3, "3 hits" );
+        ok( my $result = $results->next, "results->next" );
+        is( $result->swishtitle, 'test html doc', "get swishtitle" );
+        is( $result->get_property('swishtitle'),
+            $result->swishtitle, "get_property(swishtitle)" );
 
     }
 

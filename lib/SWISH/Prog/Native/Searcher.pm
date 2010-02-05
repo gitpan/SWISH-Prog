@@ -9,7 +9,7 @@ use SWISH::Prog::Native::Result;
 
 __PACKAGE__->mk_accessors(qw( swish sao_opts result_class ));
 
-our $VERSION = '0.37';
+our $VERSION = '0.38';
 
 =head1 NAME
 
@@ -44,6 +44,18 @@ sub init {
         @{ $self->{sao_opts} || [] }
     );
 
+    # add accessor methods to the Result class
+    # to mimic what SWISH::API::Object does.
+    my $resclass = $self->{swish}->{class};
+    if ( $resclass->can('mk_accessors') ) {
+        my @propnames = $self->{swish}->props;
+        for my $name (@propnames) {
+            if ( !$resclass->can($name) ) {
+                $resclass->mk_accessors($name);
+            }
+        }
+    }
+
     return $self;
 }
 
@@ -59,21 +71,79 @@ Passed to SWISH::API::Object in new().
 
 The SWISH::API::Object instance.
 
-=head2 search( I<query> )
+=head2 search( I<query>, I<opts> )
 
 Calls the query() method on the internal SWISH::API::Object.
 Returns a SWISH::API::Object::Results object.
 
+I<opts> is an optional hashref with the following supported
+key/values:
+
+=over
+
+=item start
+
+The starting position. Default is 0.
+
+=item max
+
+The ending position. Default is max_hits() as documented
+in SWISH::Prog::Searcher.
+
+=item order
+
+Takes a SQL-like sort string in pattern I<field> I<direction>.
+See the Swish-e docs for sort string details.
+
+=item limit
+
+Takes an arrayref of arrayrefs. Each child arrayref should
+have three values: a field (PropertyName) value, a lower limit
+and an upper limit.
+
+=item rank_scheme
+
+Takes an int, C<0> or C<1>. Default is C<1>.
+
+=back
+
 =cut
 
 sub search {
-    my $self  = shift;
-    my $query = shift or croak "query required";
-    my $opts  = shift || {};
+    my $self        = shift;
+    my $query       = shift or croak "query required";
+    my $opts        = shift || {};
+    my $start       = $opts->{start} || 0;
+    my $max         = $opts->{max} || $self->max_hits;
+    my $order       = $opts->{order};
+    my $limits      = $opts->{limit} || [];
+    my $rank_scheme = $opts->{rank_scheme};
+    $rank_scheme = 1 unless defined $rank_scheme;
 
-    # TODO use $opts
+    my $swishdb = $self->{swish};
 
-    return $self->{swish}->query($query);
+    # use idf ranking
+    $swishdb->rank_scheme($rank_scheme);
+    $swishdb->die_on_error('critical_error');
+
+    my $searcher = $swishdb->new_search_object;
+
+    for my $limit (@$limits) {
+        if ( !ref $limit or ref($limit) ne 'ARRAY' or @$limit != 3 ) {
+            croak
+                "poorly-formed limit ($limit). should be an array ref of 3 values.";
+        }
+        $searcher->set_search_limit(@$limit);
+    }
+    if ($order) {
+        $searcher->set_sort($order);
+        $swishdb->die_on_error;
+    }
+
+    my $results = $searcher->execute($query);
+    $swishdb->die_on_error;
+    $results->seek_result($start);
+    return $results;
 }
 
 1;
@@ -87,7 +157,7 @@ Peter Karman, E<lt>perl@peknet.comE<gt>
 =head1 BUGS
 
 Please report any bugs or feature requests to C<bug-swish-prog at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=SWISH-Prog>.  
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=SWISH-Prog>.
 I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
@@ -129,7 +199,7 @@ L<http://search.cpan.org/dist/SWISH-Prog/>
 Copyright 2008-2009 by Peter Karman
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself. 
+it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
