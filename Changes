@@ -165,3 +165,9 @@ Revision history for Perl extension Prog.
         * Utils->perl_to_xml() moved to Search::Tools::XML (where it really belonged).
         * enable more options to swish3
 
+0.39    07 Feb 2010
+        * add fix for systems using Swish-e 2.6, which doesn't create a index.swish-e file.
+        * remove the requires_external_bin from Makefile.PL since KSx and Xapian do not require
+          swish-e but do require SWISH::Prog. Fix tests (which also check for swish-e) to SKIP
+          the correct number of tests.
+

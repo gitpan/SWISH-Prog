@@ -5,7 +5,7 @@ use 5.008003;
 
 name 'SWISH-Prog';
 all_from 'lib/SWISH/Prog.pm';
-requires 'Search::Tools'      => '0.41';
+requires 'Search::Tools'      => '0.43';
 requires 'File::Basename'     => 0;
 requires 'MIME::Types'        => 0;
 requires 'Path::Class'        => 0;
@@ -31,8 +31,6 @@ recommends 'YAML::Syck'         => '0.72';
 recommends 'JSON'               => 2.0;
 recommends 'Mail::Box'          => 0;
 recommends 'DBI'                => 0;
-
-requires_external_bin 'swish-e';
 
 perl_version '5.8.3';
 license 'http://dev.perl.org/licenses/';
