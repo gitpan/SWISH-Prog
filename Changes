@@ -171,3 +171,7 @@ Revision history for Perl extension Prog.
           swish-e but do require SWISH::Prog. Fix tests (which also check for swish-e) to SKIP
           the correct number of tests.
 
+0.40    09 Feb 2010
+        * make -D '\x03' optional in Native::Indexer based on which version of swish-e
+          is available. The -D feature is only in 2.4.8 or newer.
+

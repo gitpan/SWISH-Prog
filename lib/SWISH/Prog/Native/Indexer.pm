@@ -9,7 +9,7 @@ use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 use File::Copy ();
 
-our $VERSION = '0.39';
+our $VERSION = '0.40';
 
 my $invindex_class = 'SWISH::Prog::Native::InvIndex';
 
@@ -113,12 +113,15 @@ Returns true if the exe() executable works, false otherwise.
 
 sub swish_check {
     my $self = shift;
-    my $cmd  = $self->exe . " -V";
+    if ( exists $self->{_exe_version} ) {
+        return $self->{_exe_version};
+    }
+    my $cmd = $self->exe . " -V";
     chomp( my @vers = `$cmd` );
     if ( !@vers ) {
         return 0;
     }
-    return $vers[0];
+    return $self->{_exe_version} = $vers[0];
 }
 
 =head2 start( [cmd] )
@@ -143,8 +146,14 @@ sub start {
     my $opts  = $self->opts || '';
     my $exe   = $self->exe;
 
-    my $cmd = shift
-        || "$exe $opts -f $index -D '\\x03' -v$v -W$w -S prog -i stdin";
+    my $swish_version = $self->swish_check;
+    my $cmd           = shift
+        || "$exe $opts -f $index -v$v -W$w -S prog -i stdin";
+
+    # swish3 compat only in 2.4.8 or higher
+    if ( $swish_version ge '2.4.8' || $swish_version ge '2.5.8' ) {
+        $cmd .= " -D '\\x03' ";
+    }
 
     if ( !$self->config->file ) {
         $self->config->write2( 0, 1 );    # write in prog mode
@@ -258,7 +267,8 @@ sub merge {
     }
 
     for (@names) {
-        if ( !-s "$_.prop" ) {  # test .prop file since that is both 2.4 and 2.6
+        if ( !-s "$_.prop" )
+        {    # test .prop file since that is both 2.4 and 2.6
             croak "$_ appears to be empty: $!";
         }
     }
