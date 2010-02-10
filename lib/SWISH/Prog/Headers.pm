@@ -8,7 +8,7 @@ use Carp;
 __PACKAGE__->mk_accessors(qw( version ));
 use bytes;    # so length() measures bytes
 
-our $VERSION = '0.40';
+our $VERSION = '0.41';
 our $AutoURL = time();
 our %Headers = (
     2 => {

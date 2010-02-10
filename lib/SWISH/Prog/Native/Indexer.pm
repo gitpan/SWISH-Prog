@@ -9,7 +9,7 @@ use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 use File::Copy ();
 
-our $VERSION = '0.40';
+our $VERSION = '0.41';
 
 my $invindex_class = 'SWISH::Prog::Native::InvIndex';
 
@@ -121,7 +121,9 @@ sub swish_check {
     if ( !@vers ) {
         return 0;
     }
-    return $self->{_exe_version} = $vers[0];
+    $self->{_exe_version} = $vers[0];
+    $self->{_exe_version} =~ s/SWISH-E //;
+    return $self->{_exe_version};
 }
 
 =head2 start( [cmd] )

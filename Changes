@@ -175,3 +175,7 @@ Revision history for Perl extension Prog.
         * make -D '\x03' optional in Native::Indexer based on which version of swish-e
           is available. The -D feature is only in 2.4.8 or newer.
 
+0.41    10 Feb 2010
+        * fix the check_swish() feature in Native::Indexer to only return the version number,
+          not the whole output of swish-e -V (fixes the -D fix in 0.40).
+

@@ -7,7 +7,7 @@ use Data::Dump qw( dump );
 use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 
-our $VERSION = '0.40';
+our $VERSION = '0.41';
 
 __PACKAGE__->mk_accessors(qw( debug verbose warnings ));
 
@@ -62,6 +62,7 @@ sub init {
     my $self = shift;
     $self->SUPER::init(@_);
     $self->{debug} ||= $ENV{PERL_DEBUG} || 0;
+    $self->{verbose} ||= $ENV{PERL_VERBOSE} || 0;
     $self->{_start} = time();
     return $self;
 }
