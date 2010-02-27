@@ -179,3 +179,7 @@ Revision history for Perl extension Prog.
         * fix the check_swish() feature in Native::Indexer to only return the version number,
           not the whole output of swish-e -V (fixes the -D fix in 0.40).
 
+0.42    27 Feb 2010
+        * add invindex format to search output headers in swish3
+        * add parsed query to search output headers in swish3; add query() method to base Results class.
+        * add progress_size to Aggregator and implement in FS.

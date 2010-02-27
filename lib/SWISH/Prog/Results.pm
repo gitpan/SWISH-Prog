@@ -4,11 +4,12 @@ use warnings;
 use base qw( SWISH::Prog::Class );
 use Carp;
 
-our $VERSION = '0.41';
+our $VERSION = '0.42';
 
 __PACKAGE__->mk_accessors(
     qw(
         hits
+        query
         ),
 );
 
@@ -36,6 +37,10 @@ the APIs that all SWISH::Prog storage backends adhere to in
 returning results from a SWISH::Prog::InvIndex.
 
 =head1 METHODS
+
+=head2 query
+
+Should return the search query as it was evaluated by the Searcher.
 
 =head2 hits
 

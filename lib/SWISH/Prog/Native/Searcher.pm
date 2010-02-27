@@ -9,7 +9,7 @@ use SWISH::Prog::Native::Result;
 
 __PACKAGE__->mk_accessors(qw( swish sao_opts result_class ));
 
-our $VERSION = '0.41';
+our $VERSION = '0.42';
 
 =head1 NAME
 
@@ -141,6 +141,7 @@ sub search {
     }
 
     my $results = $searcher->execute($query);
+    $results->{query} = join(' ', $results->parsed_words( $swishdb->indexes->[0] ));
     $swishdb->die_on_error;
     $results->seek_result($start);
     return $results;

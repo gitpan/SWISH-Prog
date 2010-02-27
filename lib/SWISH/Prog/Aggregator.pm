@@ -9,7 +9,7 @@ use SWISH::Prog::Doc;
 use Scalar::Util qw( blessed );
 use Data::Dump qw( dump );
 
-our $VERSION = '0.41';
+our $VERSION = '0.42';
 
 __PACKAGE__->mk_accessors(
     qw(
@@ -19,6 +19,7 @@ __PACKAGE__->mk_accessors(
         swish_filter_obj
         test_mode filter
         ok_if_newer_than
+        progress_size
         )
 );
 __PACKAGE__->mk_ro_accessors(qw( count ));
@@ -111,6 +112,12 @@ You may get/set the ok_if_newer_than value with the ok_if_newer_than()
 attribute method, but use set_ok_if_newer_than() to include validation
 of the supplied I<timestamp> value.
 
+=item progress_size( I<n> )
+
+If set (defaults to C<1000>), the Aggregator may choose to
+report progress every <n> doc crawl()ed. The FS Aggregator (for example)
+will print a line to stdout every I<n> docs.
+
 =back
 
 =cut
@@ -121,6 +128,7 @@ sub init {
     my $filter = delete $arg{filter};
     $self->SUPER::init(%arg);
     $self->{verbose} ||= 0;
+    $self->{progress_size} = 1000 unless defined $self->{progress_size};
 
     if (   !$self->{indexer}
         or !blessed( $self->{indexer} )

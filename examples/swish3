@@ -11,7 +11,7 @@ use Getopt::Long qw(:config no_ignore_case);
 use Data::Dump qw( dump );
 use Rose::DateTime::Util qw(parse_date);
 
-my $VERSION = '3.0.4';
+my $VERSION = '3.0.5';
 
 my $USAGE = qq{$0
  usage:
@@ -229,7 +229,9 @@ elsif ( $Opt->{query} ) {
         }
     );
     printf( "# swish3 version %s\n", $VERSION );
+    printf( "# Format: %s\n",        $format );
     printf( "# Query: %s\n",         $Opt->{query} );
+    printf( "# Parsed Query: %s\n",  $results->query );
     printf( "# Hits: %d\n",          $results->hits );
 
     if ( $Opt->{Headers} ) {

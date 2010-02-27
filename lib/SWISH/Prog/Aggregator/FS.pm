@@ -9,7 +9,7 @@ use File::Find;
 use File::Spec;
 use Data::Dump qw( dump );
 
-our $VERSION = '0.41';
+our $VERSION = '0.42';
 
 =pod
 
@@ -85,7 +85,7 @@ sub file_ok {
     my $full_path = shift;
     my $stat      = shift;
 
-    $self->debug and print "checking file $full_path\n";
+    $self->debug and warn "checking file $full_path\n";
 
     my ( $path, $file, $ext )
         = SWISH::Prog::Utils->path_parts( $full_path, $self->{_ext_re} );
@@ -109,6 +109,10 @@ sub file_ok {
         && !$self->_apply_file_match($full_path) );
 
     $self->debug and warn "  $full_path -> ok\n";
+    if ( $self->verbose & 4 ) {
+        local $| = 1;    # don't buffer
+        print "crawling $full_path\n";
+    }
 
     return $ext;
 }
@@ -138,6 +142,10 @@ sub dir_ok {
         && !$self->_apply_file_match($dir) );
 
     $self->debug and warn "  $dir -> ok\n";
+    if ( $self->verbose & 2 ) {
+        local $| = 1;                       # don't buffer
+        print "crawling $dir\n";
+    }
 
     1;                                      # TODO esp RecursionDepth
 }
@@ -301,6 +309,13 @@ sub _do_file {
     my $self = shift;
     my $file = shift;
     $self->{count}++;
+    if ( $self->progress_size and !( $self->{count} % $self->progress_size ) )
+    {
+        if ( $self->verbose & 1 ) {
+            local $| = 1;    # don't buffer
+            print "crawled $self->{count} files\n";
+        }
+    }
     if ( my $ext = $self->file_ok($file) ) {
         my $doc = $self->get_doc( $file, [ stat(_) ], $ext );
         $self->swish_filter($doc);
