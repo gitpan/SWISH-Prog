@@ -190,3 +190,6 @@ Revision history for Perl extension Prog.
         * FS->crawl now returns count
         * add MailFS aggregator class
 
+0.44    19 Mar 2010
+        * register MailFS aggregator as 'mailfs' for use with swish3 -S
+

@@ -9,7 +9,7 @@ use Scalar::Util qw( blessed );
 use SWISH::Prog::Config;
 use SWISH::Prog::InvIndex;
 
-our $VERSION = '0.43';
+our $VERSION = '0.44';
 
 __PACKAGE__->mk_accessors(qw( aggregator test_mode ));
 
@@ -67,6 +67,7 @@ Overrides base SWISH::Prog::Class init() method.
 my %ashort = (
     fs     => 'SWISH::Prog::Aggregator::FS',
     mail   => 'SWISH::Prog::Aggregator::Mail',
+    mailfs => 'SWISH::Prog::Aggregator::MailFS',
     dbi    => 'SWISH::Prog::Aggregator::DBI',
     spider => 'SWISH::Prog::Aggregator::Spider',
     object => 'SWISH::Prog::Aggregator::Object',
