@@ -7,7 +7,7 @@ use Data::Dump qw( dump );
 use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 
-our $VERSION = '0.42';
+our $VERSION = '0.43';
 
 __PACKAGE__->mk_accessors(qw( debug verbose warnings ));
 

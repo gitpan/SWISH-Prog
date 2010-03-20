@@ -183,3 +183,10 @@ Revision history for Perl extension Prog.
         * add invindex format to search output headers in swish3
         * add parsed query to search output headers in swish3; add query() method to base Results class.
         * add progress_size to Aggregator and implement in FS.
+
+0.43    19 Mar 2010
+        * remove docs and method for 'sort_order' in abstract Searcher class. No subclass uses it,
+          deferring to 'order' in the search() method opts.
+        * FS->crawl now returns count
+        * add MailFS aggregator class
+

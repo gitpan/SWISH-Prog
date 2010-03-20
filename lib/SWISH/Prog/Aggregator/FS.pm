@@ -9,13 +9,13 @@ use File::Find;
 use File::Spec;
 use Data::Dump qw( dump );
 
-our $VERSION = '0.42';
+our $VERSION = '0.43';
 
 =pod
 
 =head1 NAME
 
-SWISH::Prog::Aggregator::FS - filesystem aggregator
+SWISH::Prog::Aggregator::FS - crawl a filesystem
 
 =head1 SYNOPSIS
 
@@ -389,6 +389,7 @@ sub crawl {
         );
     }
 
+    return $self->{count};
 }
 
 1;

@@ -5,11 +5,10 @@ use base qw( SWISH::Prog::Class );
 use Carp;
 use Scalar::Util qw( blessed );
 
-our $VERSION = '0.42';
+our $VERSION = '0.43';
 
 __PACKAGE__->mk_accessors(
     qw(
-        sort_order
         max_hits
         invindex
         ),
@@ -24,7 +23,6 @@ SWISH::Prog::Searcher - base searcher class
  my $searcher = SWISH::Prog::Searcher->new(
                     invindex        => 'path/to/index',
                     max_hits        => 1000,
-                    sort_order      => 'score',
                 );
                 
  my $results = $searcher->search( 'foo bar' );
@@ -54,11 +52,6 @@ indexes at once).
 =head2 max_hits
 
 The maximum number of hits to return. Optional. Default is 1000.
-
-=head2 sort_order
-
-The order in which Results will be sorted. Default is descending
-by C<score>.
 
 =cut
 
