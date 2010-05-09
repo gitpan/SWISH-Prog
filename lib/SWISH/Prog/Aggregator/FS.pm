@@ -9,7 +9,7 @@ use File::Find;
 use File::Spec;
 use Data::Dump qw( dump );
 
-our $VERSION = '0.44';
+our $VERSION = '0.45';
 
 =pod
 
@@ -63,8 +63,10 @@ sub init {
         $self->{_ext_re} = $SWISH::Prog::Utils::ExtRE;
     }
 
-    # if running with SWISH::3, instantiate one for the slurp advantage
-    if ( $ENV{SWISH3} ) {
+    # if running with SWISH::3,
+    # instantiate for the slurp advantage
+    eval "use SWISH::3 0.06";
+    if ( !$@ ) {
         $self->{_swish3} = SWISH::3->new;
     }
 
@@ -267,10 +269,19 @@ sub get_doc {
 
     # the SWISH::3->slurp is about 50% faster
     # but obviously only available if SWISH::3 is loaded.
+    # It also handles .gz files transparently based on .gz
+    # extension, so must remove the extension to avoid
+    # double-unzip via SWISH::Filter.
+
     # NOTE we always read in binary (raw) mode in case
     # the file is compressed, binary, etc.
     if ( $self->{_swish3} ) {
-        eval { $buf = $self->{_swish3}->slurp( $url, 1 ) };
+
+        #warn "$url using swish3->slurp\n";
+        eval {
+            $buf = $self->{_swish3}->slurp( $url, 1 );
+            $url =~ s/\.gz$//;    # post-slurp, in case it failed.
+        };
     }
     else {
         eval { $buf = read_file( $url, binmode => ':raw' ) };

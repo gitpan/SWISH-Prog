@@ -193,3 +193,10 @@ Revision history for Perl extension Prog.
 0.44    19 Mar 2010
         * register MailFS aggregator as 'mailfs' for use with swish3 -S
 
+0.45    08 May 2010
+        * fix swish3 to allow "swishrank" as -x option
+        * enable -H option in swish3
+        * SWISH::3->slurp optimization now uses transparent gunzip feature. Requires SWISH::3 >= 0.06.
+        * fix backcompat for DefaultContents config in Config->ver2_to_ver3()
+
+

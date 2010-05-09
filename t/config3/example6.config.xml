@@ -4,7 +4,6 @@
  <!-- WARNING: BeginCharacters ignored by Swish3 -->
  <BeginCharacters>abcdefghijklmnopqrstuvwxyz0123456789</BeginCharacters>
  <BumpPositionCounterCharacters>|.</BumpPositionCounterCharacters>
- <DefaultContents>HTML</DefaultContents>
  <!-- WARNING: EndCharacters ignored by Swish3 -->
  <EndCharacters>abcdefghijklmnopqrstuvwxyz0123456789</EndCharacters>
  <!-- WARNING: IgnoreFirstChar ignored by Swish3 -->
@@ -24,4 +23,7 @@
  <Index>
   <Format>Native</Format>
  </Index>
+ <Parsers>
+  <default>XML</default>
+ </Parsers>
 </swish>

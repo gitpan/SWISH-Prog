@@ -16,7 +16,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.44';
+our $VERSION = '0.45';
 
 my $XML = Search::Tools::XML->new;
 
@@ -502,6 +502,7 @@ sub ver2_to_ver3 {
     # list of config directives that take arguments to the opt value
     # i.e. the directive has 3 or more parts
     my %takes_arg = map { $_ => 1 } qw(
+        DefaultContents
         ExtractPath
         FileFilter
         FileRules
@@ -690,7 +691,7 @@ KEY: for my $k ( sort keys %$config ) {
         elsif ( $k eq 'IndexContents' ) {
             for my $line (@args) {
                 my ( $parser_type, $file_ext )
-                    = ( $line =~ m/^(XML|HTML|TXT)\*? +(.+)$/ );
+                    = ( $line =~ m/^(XML|HTML|TXT)[2\*]? +(.+)$/ );
 
                 if ( !exists $parser_map{$parser_type} ) {
                     warn "Unsupported Parser type: $parser_type\n";
@@ -724,6 +725,10 @@ KEY: for my $k ( sort keys %$config ) {
                     $conf3{MIME}->{$ext} = $mime;
                 }
             }
+        }
+        elsif ( $k eq 'DefaultContents' ) {
+            my $parser = $args[0];
+            $conf3{Parsers}->{default}->{$parser} = $parser;
         }
         elsif ( exists $remap{$k} ) {
             push( @{ $conf3{ $remap{$k} } }, @args );

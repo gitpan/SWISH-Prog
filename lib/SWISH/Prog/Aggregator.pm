@@ -9,7 +9,7 @@ use SWISH::Prog::Doc;
 use Scalar::Util qw( blessed );
 use Data::Dump qw( dump );
 
-our $VERSION = '0.44';
+our $VERSION = '0.45';
 
 __PACKAGE__->mk_accessors(
     qw(
@@ -227,6 +227,11 @@ sub swish_filter {
         {
             warn "skipping $url - filtering error\n";
             return;
+        }
+
+        if ( $self->debug > 1 ) {
+            warn "$url [$type] was filtered\n";
+            warn "content changed\n" if $doc->content ne ${ $f->fetch_doc };
         }
 
         $doc->content( ${ $f->fetch_doc } );

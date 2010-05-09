@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 11;
+use Test::More tests => 14;
 
 use_ok('SWISH::Prog');
 use_ok('SWISH::Prog::Native::Indexer');
@@ -12,7 +12,7 @@ SKIP: {
     # is executable present?
     my $test = SWISH::Prog::Native::Indexer->new;
     if ( !$test->swish_check ) {
-        skip "swish-e not installed", 7;
+        skip "swish-e not installed", 10;
     }
 
     ok( my $config = SWISH::Prog::Config->new('t/test.conf'),
@@ -55,7 +55,24 @@ SKIP: {
 
     ok( $prog->run('t/'), "run program" );
 
-    is( $prog->count, 5, "indexed test docs" );
+    is( $prog->count, 7, "indexed test docs" );
+
+    # test with a search
+SKIP: {
+
+        eval { require SWISH::Prog::Native::Searcher; };
+        if ($@) {
+            skip "Cannot test Searcher without SWISH::API", 3;
+        }
+        ok( my $searcher
+                = SWISH::Prog::Native::Searcher->new( invindex => $invindex,
+                ),
+            "new searcher"
+        );
+        ok( my $results = $searcher->search('gzip'), "do search" );
+        is( $results->hits, 2, "2 gzip hits" );
+
+    }
 
     # clean up header so other test counts work
     unlink('t/testindex/swish.xml') unless $ENV{PERL_DEBUG};

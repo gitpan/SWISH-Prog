@@ -11,7 +11,7 @@ use Getopt::Long qw(:config no_ignore_case);
 use Data::Dump qw( dump );
 use Rose::DateTime::Util qw(parse_date);
 
-my $VERSION = '3.0.5';
+my $VERSION = '3.0.6';
 
 my $USAGE = qq{$0
  usage:
@@ -58,7 +58,7 @@ my $USAGE = qq{$0
     -f : invindex dir to create or search from [index.swish3]
     -F : next param is invindex format (ks, xapian, native, or dbi) [native]
     -h : print this usage statement
-    #-H : "Result Header Output": verbosity (0 to 9)  [1].
+    -H : "Result Header Output": verbosity (0 to 9)  [1].
     #-k : Print words starting with a given char.
     -L : Limit results to a range of property values
     -m : the maximum number of results to return [defaults to all results]
@@ -124,14 +124,12 @@ my %allopts = (
     'newer_than|N=s'      => 'index only documents newer than',
     'links'               => 'follow symbolic links when indexing',
     'Merge'               => 'merge 2 or more indexes',
-    'Headers=i'           => 'Header output verbosity (native only)',
+    'Headers=i'           => 'Header output verbosity',
     'RankScheme=i'        => 'ranking algorithm (native only)',
     'sort_order=s'        => 'result sort order',
 );
 
 my %native_only_opts = (
-
-    #'Headers'    => 1,
     'RankScheme' => 1,
 );
 
@@ -228,14 +226,16 @@ elsif ( $Opt->{query} ) {
             order       => $Opt->{sort_order},
         }
     );
-    printf( "# swish3 version %s\n", $VERSION );
-    printf( "# Format: %s\n",        $format );
-    printf( "# Query: %s\n",         $Opt->{query} );
-    printf( "# Parsed Query: %s\n",  $results->query );
-    printf( "# Hits: %d\n",          $results->hits );
 
     if ( $Opt->{Headers} ) {
+        printf( "# swish3 version %s\n", $VERSION );
+        printf( "# Format: %s\n",        $format );
+        printf( "# Query: %s\n",         $Opt->{query} );
+        printf( "# Hits: %d\n",          $results->hits );
+    }
 
+    if ( $Opt->{Headers} > 1 ) {
+        printf( "# Parsed Query: %s\n",  $results->query );
     }
 
     my ( $output_format, $output_format_str );
@@ -248,9 +248,10 @@ elsif ( $Opt->{query} ) {
             if (    !exists $meta->PropertyNames->{$p}
                 and !exists $default_properties->{$p}
                 and $p ne 'swishtitle'
-                and $p ne 'swishdescription' )
+                and $p ne 'swishdescription'
+                and $p ne 'swishrank' )
             {
-                croak "Invalid PropertyName: $p";
+                die "Invalid PropertyName: $p\n";
             }
             else {
                 push @props, $p;
@@ -277,7 +278,13 @@ elsif ( $Opt->{query} ) {
         if ($output_format) {
             my @res;
             for my $prop (@$output_format) {
-                my $val = $result->get_property($prop);
+                my $val;
+                if ( $prop eq 'swishrank' ) {
+                    $val = $result->score;
+                }
+                else {
+                    $val = $result->get_property($prop);
+                }
                 $val = '' unless defined $val;
                 $val =~ s/\003/\\x{03}/g;
                 push( @res, $val );
@@ -292,6 +299,7 @@ elsif ( $Opt->{query} ) {
             last if ++$counter >= $Opt->{max};
         }
     }
+    print ".\n";
 }
 elsif ( $Opt->{Merge} ) {
     my @indexes = @ARGV;

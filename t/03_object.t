@@ -11,9 +11,14 @@ SKIP: {
         diag "install JSON to test Object aggregator";
         skip "JSON required for Object test", 14;
     }
+    eval "use YAML::Syck";
+    if ($@) {
+        diag "install YAML::Syck to test Object aggregator";
+        skip "YAML::Syck required for Object test", 14;
+    }
     eval "use SWISH::Prog::Aggregator::Object";
     if ($@) {
-        diag "missing installed module: $@";
+        diag "skipping tests for Aggregator::Object";
         skip $@, 14;
     }
 

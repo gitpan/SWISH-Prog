@@ -9,7 +9,7 @@ use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 use File::Copy ();
 
-our $VERSION = '0.44';
+our $VERSION = '0.45';
 
 my $invindex_class = 'SWISH::Prog::Native::InvIndex';
 

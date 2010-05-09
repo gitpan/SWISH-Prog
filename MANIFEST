@@ -75,6 +75,8 @@ t/mailfs/somedir/cur/1201404060.V802I5f9e4M893922.louvin.peknet.com:2,
 t/pod-coverage.t
 t/pod.t
 t/swish.xml
+t/test-gz.html.gz
+t/test-gz.xml.gz
 t/test.conf
 t/test.html
 t/test.pdf
