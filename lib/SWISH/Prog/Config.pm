@@ -16,7 +16,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.45';
+our $VERSION = '0.46';
 
 my $XML = Search::Tools::XML->new;
 
@@ -26,7 +26,7 @@ my %unique = map { $_ => 1 } qw(
     MetaNames
     PropertyNames
     PropertyNamesNoStripChars
-
+    IncludeConfigFile
 );
 
 my @Opts = qw(
@@ -554,6 +554,12 @@ sub ver2_to_ver3 {
     my $class = ref($self) || $self;
     my $config = $file ? $class->new->read2($file) : $self->as_hash;
     my $time = $no_timestamp ? '' : localtime();
+    
+    # if we were not passed a file name, all the config resolution
+    # has already been done, so do not perpetuate.
+    if (!$file) {
+        delete $config->{IncludeConfigFile};
+    }
 
     my $xml = <<EOF;
 <?xml version="1.0" encoding="UTF-8"?>

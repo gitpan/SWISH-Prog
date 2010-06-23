@@ -37,8 +37,9 @@ requires:
   Path::Class: 0
   Rose::DateTime: 0
   Rose::ObjectX::CAF: 0
-  SWISH::Filter: 0.09
+  SWISH::Filter: 0.15
   Scalar::Util: 0
+  Search::Query: 0.17
   Search::Tools: 0.43
   Test::More: 0
   XML::Simple: 0
@@ -48,4 +49,4 @@ resources:
   homepage: http://dev.swish-e.org/wiki/perl
   license: http://dev.perl.org/licenses/
   repository: http://svn.swish-e.org/perl/SWISH-Prog/
-version: 0.45
+version: 0.46

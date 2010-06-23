@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 14;
+use Test::More tests => 17;
 
 use_ok('SWISH::Prog');
 use_ok('SWISH::Prog::Native::Indexer');
@@ -12,7 +12,7 @@ SKIP: {
     # is executable present?
     my $test = SWISH::Prog::Native::Indexer->new;
     if ( !$test->swish_check ) {
-        skip "swish-e not installed", 10;
+        skip "swish-e not installed", 13;
     }
 
     ok( my $config = SWISH::Prog::Config->new('t/test.conf'),
@@ -62,7 +62,7 @@ SKIP: {
 
         eval { require SWISH::Prog::Native::Searcher; };
         if ($@) {
-            skip "Cannot test Searcher without SWISH::API", 3;
+            skip "Cannot test Searcher without SWISH::API", 6;
         }
         ok( my $searcher
                 = SWISH::Prog::Native::Searcher->new( invindex => $invindex,
@@ -71,6 +71,19 @@ SKIP: {
         );
         ok( my $results = $searcher->search('gzip'), "do search" );
         is( $results->hits, 2, "2 gzip hits" );
+
+        ok( my $results_OR = $searcher->search(
+                qq/some words/, { default_boolop => 'OR' }
+            ),
+            "default_boolop=OR"
+        );
+        ok( my $results_AND = $searcher->search(
+                qq/some words/, { default_boolop => 'AND' }
+            ),
+            "default_boolop=AND"
+        );
+        cmp_ok( $results_OR->hits, '>', $results_AND->hits,
+            "OR hits > AND hits" );
 
     }
 

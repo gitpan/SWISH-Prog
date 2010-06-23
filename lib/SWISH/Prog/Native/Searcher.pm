@@ -6,10 +6,11 @@ use base qw( SWISH::Prog::Searcher );
 use SWISH::API::Object;
 use SWISH::Prog::Native::InvIndex;
 use SWISH::Prog::Native::Result;
+use Search::Query;
 
 __PACKAGE__->mk_accessors(qw( swish sao_opts result_class ));
 
-our $VERSION = '0.45';
+our $VERSION = '0.46';
 
 =head1 NAME
 
@@ -55,6 +56,37 @@ sub init {
             }
         }
     }
+
+    # load meta from the first invindex
+    my $invindex = $self->invindex->[0];
+    my $config   = $invindex->meta;
+
+    # have to wrap MetaNames check in eval because
+    # there may not be any explicitly defined in config.
+    my $metanames;
+    eval { $metanames = $config->MetaNames; };
+    if ( $@ and $@ =~ m/^no such Meta key: MetaNames/ ) {
+        $metanames = { swishdefault => {} };
+    }
+    my $field_names = [ keys %$metanames ];
+    my %fieldtypes;
+    for my $name (@$field_names) {
+        $fieldtypes{$name} = 1; # TODO check PropertyNames for string|int|date
+        if ( exists $metanames->{$name}->{alias_for} ) {
+            $fieldtypes{$name}->{alias_for}
+                = $metanames->{$name}->{alias_for};
+        }
+    }
+
+    # TODO could expose 'qp' as param to new().
+    $self->{qp} ||= Search::Query::Parser->new(
+        dialect          => 'SWISH',
+        fields           => \%fieldtypes,
+        query_class_opts => {
+            default_field => $field_names,
+            debug         => $self->debug,
+        }
+    );
 
     return $self;
 }
@@ -105,9 +137,19 @@ and an upper limit.
 
 Takes an int, C<0> or C<1>. Default is C<1>.
 
+=item default_boolop
+
+The default boolean connector for parsing I<query>. Valid values
+are B<AND> and B<OR>. The default is B<AND>.
+
 =back
 
 =cut
+
+my %boolops = (
+    'AND' => '+',
+    'OR'  => '',
+);
 
 sub search {
     my $self        = shift;
@@ -119,6 +161,14 @@ sub search {
     my $limits      = $opts->{limit} || [];
     my $rank_scheme = $opts->{rank_scheme};
     $rank_scheme = 1 unless defined $rank_scheme;
+    my $boolop = $opts->{default_boolop} || 'AND';
+
+    if ( !exists $boolops{ uc($boolop) } ) {
+        croak "Unsupported default_boolop: $boolop (should be AND or OR)";
+    }
+    $self->{qp}->default_boolop( $boolops{$boolop} );
+    my $parsed_query = $self->{qp}->parse($query)
+        or croak "Query syntax error: " . $self->{qp}->error;
 
     my $swishdb = $self->{swish};
 
@@ -140,8 +190,10 @@ sub search {
         $swishdb->die_on_error;
     }
 
-    my $results = $searcher->execute($query);
-    $results->{query} = join(' ', $results->parsed_words( $swishdb->indexes->[0] ));
+    my $results = $searcher->execute("$parsed_query");
+    $results->{swish_query}
+        = join( ' ', $results->parsed_words( $swishdb->indexes->[0] ) );
+    $results->{query} = $parsed_query;
     $swishdb->die_on_error;
     $results->seek_result($start);
     return $results;
