@@ -10,8 +10,9 @@ use SWISH::3;
 use Getopt::Long qw(:config no_ignore_case);
 use Data::Dump qw( dump );
 use Rose::DateTime::Util qw(parse_date);
+use Time::HiRes;
 
-my $VERSION = '3.0.6';
+my $VERSION = '3.0.7';
 
 my $USAGE = qq{$0
  usage:
@@ -129,9 +130,7 @@ my %allopts = (
     'sort_order=s'        => 'result sort order',
 );
 
-my %native_only_opts = (
-    'RankScheme' => 1,
-);
+my %native_only_opts = ( 'RankScheme' => 1, );
 
 GetOptions( $Opt, keys %allopts ) or die $USAGE;
 
@@ -216,8 +215,9 @@ elsif ( $Opt->{query} ) {
     my $sclass   = "SWISH::Prog::${format}::Searcher";
     eval "require $sclass";
     croak $@ if $@;
-    my $searcher = $sclass->new( invindex => $invindex->path . '', );
-    my $results = $searcher->search(
+    my $searcher   = $sclass->new( invindex => $invindex->path . '', );
+    my $start_time = Time::HiRes::time();
+    my $results    = $searcher->search(
         $Opt->{query},
         {   start       => $Opt->{begin},
             max         => $Opt->{max},
@@ -226,16 +226,18 @@ elsif ( $Opt->{query} ) {
             order       => $Opt->{sort_order},
         }
     );
+    my $search_time = Time::HiRes::time() - $start_time;
 
     if ( $Opt->{Headers} ) {
         printf( "# swish3 version %s\n", $VERSION );
         printf( "# Format: %s\n",        $format );
         printf( "# Query: %s\n",         $Opt->{query} );
         printf( "# Hits: %d\n",          $results->hits );
+        printf( "# Search time: %.4f\n", $search_time );
     }
 
     if ( $Opt->{Headers} > 1 ) {
-        printf( "# Parsed Query: %s\n",  $results->query );
+        printf( "# Parsed Query: %s\n", $results->query );
     }
 
     my ( $output_format, $output_format_str );

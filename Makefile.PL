@@ -7,6 +7,7 @@ name 'SWISH-Prog';
 all_from 'lib/SWISH/Prog.pm';
 requires 'Search::Tools'      => '0.43';
 requires 'File::Basename'     => 0;
+requires 'Time::HiRes'        => 0;
 requires 'MIME::Types'        => 0;
 requires 'Path::Class'        => 0;
 requires 'SWISH::Filter'      => '0.15';

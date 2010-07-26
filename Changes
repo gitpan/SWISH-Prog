@@ -204,3 +204,7 @@ Revision history for Perl extension Prog.
         * add default_boolop feature to Native::Searcher
         * fix IncludeConfigFile recursionin Config->ver2_to_ver()
 
+0.47    25 July 2010
+        * add Search time to swish3 (3.0.7)
+        * fix bug in Native::Searcher affecting fieldtypes
+

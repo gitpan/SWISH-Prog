@@ -9,7 +9,7 @@ use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 use File::Copy ();
 
-our $VERSION = '0.46';
+our $VERSION = '0.47';
 
 my $invindex_class = 'SWISH::Prog::Native::InvIndex';
 
@@ -343,6 +343,10 @@ sub process {
     my $self = shift;
     my $doc  = $self->SUPER::process(@_);
     $doc->version(2);
+
+    if ($self->debug) {
+        warn $doc;
+    }
 
     print { $self->fh } $doc
         or croak "failed to print to filehandle " . $self->fh . ": $!\n";

@@ -10,7 +10,7 @@ use Search::Query;
 
 __PACKAGE__->mk_accessors(qw( swish sao_opts result_class ));
 
-our $VERSION = '0.46';
+our $VERSION = '0.47';
 
 =head1 NAME
 
@@ -71,7 +71,10 @@ sub init {
     my $field_names = [ keys %$metanames ];
     my %fieldtypes;
     for my $name (@$field_names) {
-        $fieldtypes{$name} = 1; # TODO check PropertyNames for string|int|date
+
+        # TODO check PropertyNames for string|int|date
+        $fieldtypes{$name} = {};
+
         if ( exists $metanames->{$name}->{alias_for} ) {
             $fieldtypes{$name}->{alias_for}
                 = $metanames->{$name}->{alias_for};

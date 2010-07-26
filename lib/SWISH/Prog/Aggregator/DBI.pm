@@ -10,7 +10,7 @@ use SWISH::Prog::Utils;
 
 __PACKAGE__->mk_accessors(qw( db alias_columns schema ));
 
-our $VERSION = '0.46';
+our $VERSION = '0.47';
 
 my $XMLer = Search::Tools::XML->new();    # included in Utils
 
