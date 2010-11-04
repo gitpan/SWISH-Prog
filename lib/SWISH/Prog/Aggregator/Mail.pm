@@ -8,7 +8,7 @@ use Search::Tools::XML;
 use Mail::Box::Manager;
 use base qw( SWISH::Prog::Aggregator );
 
-our $VERSION = '0.47';
+our $VERSION = '0.48';
 
 my $XMLer = Search::Tools::XML->new();
 
@@ -132,7 +132,7 @@ sub _process_folder {
         foreach my $message ( $subf->messages ) {
             my $doc = $self->get_doc( $sub, $message );
             $indexer->process($doc);
-            $self->{count}++;
+            $self->_increment_count;
         }
 
         $self->_process_folder($subf);

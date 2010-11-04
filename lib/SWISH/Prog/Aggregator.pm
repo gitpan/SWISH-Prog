@@ -9,7 +9,7 @@ use SWISH::Prog::Doc;
 use Scalar::Util qw( blessed );
 use Data::Dump qw( dump );
 
-our $VERSION = '0.47';
+our $VERSION = '0.48';
 
 __PACKAGE__->mk_accessors(
     qw(
@@ -19,7 +19,7 @@ __PACKAGE__->mk_accessors(
         swish_filter_obj
         test_mode filter
         ok_if_newer_than
-        progress_size
+        progress
         )
 );
 __PACKAGE__->mk_ro_accessors(qw( count ));
@@ -112,11 +112,11 @@ You may get/set the ok_if_newer_than value with the ok_if_newer_than()
 attribute method, but use set_ok_if_newer_than() to include validation
 of the supplied I<timestamp> value.
 
-=item progress_size( I<n> )
+=item progress( I<Term::ProgressBar object> )
 
-If set (defaults to C<1000>), the Aggregator may choose to
-report progress every <n> doc crawl()ed. The FS Aggregator (for example)
-will print a line to stdout every I<n> docs.
+Get/set a progress object. The default used in the examples/swish3
+script is Term::ProgressBar. If set, it will be incremented
+just like count() is.
 
 =back
 
@@ -128,7 +128,8 @@ sub init {
     my $filter = delete $arg{filter};
     $self->SUPER::init(%arg);
     $self->{verbose} ||= 0;
-    $self->{progress_size} = 1000 unless defined $self->{progress_size};
+    $self->{__progress_so_far} = 0;
+    $self->{__progress_next}   = 0;
 
     if (   !$self->{indexer}
         or !blessed( $self->{indexer} )
@@ -247,9 +248,11 @@ sub swish_filter {
     }
     else {
 
-        if ($self->debug) {
-            warn sprintf("skipping %s - cannot filter %s\n", $doc->url, $doc->type);
-            warn sprintf(" available filter: %s\n", $_) for $self->{swish_filter_obj}->filter_list;
+        if ( $self->debug ) {
+            warn sprintf( "skipping %s - cannot filter %s\n",
+                $doc->url, $doc->type );
+            warn sprintf( " available filter: %s\n", $_ )
+                for $self->{swish_filter_obj}->filter_list;
         }
 
     }
@@ -294,6 +297,24 @@ sub set_ok_if_newer_than {
         croak "timestamp should be an integer";
     }
     $self->ok_if_newer_than($ts);
+}
+
+#
+# private method
+#
+
+sub _increment_count {
+    my $self = shift;
+    my $count = shift || 1;
+    $self->{count} += $count;
+    if ( $self->{progress} ) {
+        $self->{__progress_so_far} += $count;
+        if ( $self->{__progress_so_far} >= $self->{__progress_next} ) {
+            $self->{__progress_next}
+                = $self->{progress}->update( $self->{__progress_so_far} );
+        }
+    }
+    return $self;
 }
 
 1;

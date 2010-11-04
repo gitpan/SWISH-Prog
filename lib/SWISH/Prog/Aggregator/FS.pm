@@ -9,7 +9,7 @@ use File::Find;
 use File::Spec;
 use Data::Dump qw( dump );
 
-our $VERSION = '0.47';
+our $VERSION = '0.48';
 
 =pod
 
@@ -65,7 +65,7 @@ sub init {
 
     # if running with SWISH::3,
     # instantiate for the slurp advantage
-    eval "use SWISH::3 0.06";
+    eval "use SWISH::3 0.09";
     if ( !$@ ) {
         $self->{_swish3} = SWISH::3->new;
     }
@@ -319,14 +319,6 @@ sub get_doc {
 sub _do_file {
     my $self = shift;
     my $file = shift;
-    $self->{count}++;
-    if ( $self->progress_size and !( $self->{count} % $self->progress_size ) )
-    {
-        if ( $self->verbose & 1 ) {
-            local $| = 1;    # don't buffer
-            print "crawled $self->{count} files\n";
-        }
-    }
     if ( my $ext = $self->file_ok($file) ) {
         my $doc = $self->get_doc( $file, [ stat(_) ], $ext );
         $self->swish_filter($doc);
@@ -336,6 +328,7 @@ sub _do_file {
         else {
             $self->{indexer}->process($doc);
         }
+        $self->_increment_count;
     }
     else {
         $self->debug and warn "skipping file $file\n";

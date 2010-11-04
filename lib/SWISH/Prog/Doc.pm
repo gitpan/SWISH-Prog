@@ -2,6 +2,7 @@ package SWISH::Prog::Doc;
 use strict;
 use warnings;
 use Carp;
+use Data::Dump qw( dump );
 use base qw( SWISH::Prog::Class );
 use overload(
     '""'     => \&as_string,
@@ -11,7 +12,7 @@ use overload(
 
 use SWISH::Prog::Headers;
 
-our $VERSION = '0.47';
+our $VERSION = '0.48';
 
 __PACKAGE__->mk_accessors(
     qw( url modtime type parser content action size charset data version ));

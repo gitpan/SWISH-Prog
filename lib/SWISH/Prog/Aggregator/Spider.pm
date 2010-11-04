@@ -15,7 +15,7 @@ __PACKAGE__->mk_accessors(
 
 #use LWP::Debug qw(+);
 
-our $VERSION = '0.47';
+our $VERSION = '0.48';
 
 # TODO make these configurable
 my %parser_types = %SWISH::Prog::Utils::ParserTypes;
@@ -445,8 +445,8 @@ sub crawl {
         $self->{_base} = $uri->canonical->as_string;
         while ( my $doc = $self->get_doc ) {
             next unless blessed($doc);
-            $self->{count}++;
             $indexer->process($doc);
+            $self->_increment_count;
         }
     }
 

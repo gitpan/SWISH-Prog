@@ -24,6 +24,7 @@ recommends:
   JSON: 2
   Mail::Box: 0
   SWISH::API::Object: 0.13
+  Term::ProgressBar: 0
   URI: 0
   WWW::Mechanize: 0
   YAML::Syck: 0.72
@@ -50,4 +51,4 @@ resources:
   homepage: http://dev.swish-e.org/wiki/perl
   license: http://dev.perl.org/licenses/
   repository: http://svn.swish-e.org/perl/SWISH-Prog/
-version: 0.47
+version: 0.48

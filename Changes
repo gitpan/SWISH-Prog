@@ -208,3 +208,9 @@ Revision history for Perl extension Prog.
         * add Search time to swish3 (3.0.7)
         * fix bug in Native::Searcher affecting fieldtypes
 
+0.48    03 Nov 2010
+        * added progress() feature to Aggregator classes, and 'expected' param to swish3.
+        * add CascadeMetaContext config option for Swish3 compatibility
+        * bump SWISH::3 (optional) dependency to 0.09
+        * fix MailFS aggregator to preserve filesystem paths as Doc url
+

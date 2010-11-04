@@ -7,7 +7,7 @@ use SWISH::Prog::Aggregator::Mail;    # delegate doc creation
 use Carp;
 use Data::Dump qw( dump );
 
-our $VERSION = '0.47';
+our $VERSION = '0.48';
 
 =pod
 
@@ -135,6 +135,9 @@ sub get_doc {
 
     # and finally convert to the SWISH::Prog::Doc we intend to return
     my $mail = $self->{_mailer}->get_doc( $folder, $msg );
+    
+    # reinstate original url from filesystem
+    $mail->url($doc->url);
 
     #carp "second pass for mail doc: " . dump($mail);
 

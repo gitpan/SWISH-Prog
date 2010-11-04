@@ -12,11 +12,11 @@ use Data::Dump qw( dump );
 use Rose::DateTime::Util qw(parse_date);
 use Time::HiRes;
 
-my $VERSION = '3.0.7';
+my $VERSION = '3.0.8';
 
 my $USAGE = qq{$0
  usage:
-    swish3 [-e] [-i dir file ... ] [-S aggregator] [-c file] [-f invindex] [-l] [-v (num)]
+    swish3 [-E N] [-i dir file ... ] [-S aggregator] [-c file] [-f invindex] [-l] [-v (num)]
     swish3 -w word1 word2 ... [-f file1 file2 ...] \
           [-P phrase_delimiter] [-p prop1 ...] [-s sortprop1 [asc|desc] ...] \
           [-m num] [-t str] [-d delim] [-H (num)] [-x output_format] \
@@ -33,6 +33,7 @@ my $USAGE = qq{$0
  indexing options:
     -c : configuration file
     -D : Debug mode
+    -E : next param is total expected files (generates progress bar)
     -f : invindex dir to create or search from [index.swish3]
     -F : next param is invindex format (ks, xapian, native, or dbi) [native]
     -i : create an index from the specified files
@@ -103,6 +104,7 @@ my $Opt = {
     Merge           => undef,
     Headers         => 1,
     sort_order      => '',
+    Expected        => undef,
 };
 
 my %allopts = (
@@ -128,6 +130,7 @@ my %allopts = (
     'Headers=i'           => 'Header output verbosity',
     'RankScheme=i'        => 'ranking algorithm (native only)',
     'sort_order=s'        => 'result sort order',
+    'Expected=i'          => 'expected total docs (generates progress bar)',
 );
 
 my %native_only_opts = ( 'RankScheme' => 1, );
@@ -200,7 +203,10 @@ if ( $Opt->{input} ) {
 
     }
     if ( $Opt->{links} and $Opt->{Source} eq 'fs' ) {
-        $prog->aggregator->follow(1);
+        $prog->aggregator->config->FollowSymLinks(1);
+    }
+    if ( $Opt->{Expected} ) {
+        $prog->aggregator->progress( progress_bar( $Opt->{Expected} ) );
     }
     my $start    = time();
     my $num_docs = $prog->index(@ARGV);
@@ -358,6 +364,18 @@ sub parse_limits {
 
 }
 
+sub progress_bar {
+    require Term::ProgressBar;
+    my $total = shift;
+    my $tpb   = Term::ProgressBar->new(
+        {   ETA   => 'linear',
+            name  => 'swish3',
+            count => $total,
+        }
+    );
+    return $tpb;
+}
+
 __END__
 
 =pod
@@ -368,7 +386,7 @@ swish3 - SWISH::Prog-based Swish3 implementation
 
 =head1 SYNOPSIS
 
-    swish3 [-e] [-i dir file ... ] [-S aggregator] [-c file] [-f invindex] [-l] [-v (num)]
+    swish3 [-E N] [-i dir file ... ] [-S aggregator] [-c file] [-f invindex] [-l] [-v (num)]
     swish3 -w word1 word2 ... [-f file1 file2 ...] \
           [-P phrase_delimiter] [-p prop1 ...] [-s sortprop1 [asc|desc] ...] \
           [-m num] [-t str] [-d delim] [-H (num)] [-x output_format] \
