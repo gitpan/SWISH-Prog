@@ -9,7 +9,7 @@ use SWISH::Prog::Doc;
 use Scalar::Util qw( blessed );
 use Data::Dump qw( dump );
 
-our $VERSION = '0.48';
+our $VERSION = '0.49';
 
 __PACKAGE__->mk_accessors(
     qw(
@@ -249,7 +249,7 @@ sub swish_filter {
     else {
 
         if ( $self->debug ) {
-            warn sprintf( "skipping %s - cannot filter %s\n",
+            warn sprintf( "No filter applied to %s - cannot filter %s\n",
                 $doc->url, $doc->type );
             warn sprintf( " available filter: %s\n", $_ )
                 for $self->{swish_filter_obj}->filter_list;

@@ -6,10 +6,10 @@ use base qw( SWISH::Prog::Aggregator );
 use Carp;
 use File::Slurp;
 use File::Find;
-use File::Spec;
+use File::Rules;
 use Data::Dump qw( dump );
 
-our $VERSION = '0.48';
+our $VERSION = '0.49';
 
 =pod
 
@@ -92,6 +92,8 @@ sub file_ok {
     my ( $path, $file, $ext )
         = SWISH::Prog::Utils->path_parts( $full_path, $self->{_ext_re} );
 
+    $self->debug and warn "path=$path file=$file ext=$ext\n";
+
     return 0 unless $ext;
     return 0 if $full_path =~ m![\\/](\.svn|RCS)[\\/]!; # TODO configure this.
     return 0 if $file =~ m/^\./;
@@ -152,98 +154,17 @@ sub dir_ok {
     1;                                      # TODO esp RecursionDepth
 }
 
-# FileRules == exclude
-# FileMatch == include
-my $FileRuleRegEx
-    = qr/^(filename|pathname|dirname|directory|title)\ +(contains|is|regex)\ +(.+)/io;
-
-sub _parse_file_rule {
-    my ( $self, $text ) = @_;
-
-    # memoize
-    return $self->{_file_rules}->{$text}
-        if exists $self->{_file_rules}->{$text};
-
-    # parse
-    my ( $type, $action, $re ) = ( $text =~ m/$FileRuleRegEx/ );
-    if ( !$type or !$action or !$re ) {
-        croak "Bad syntax in FileRule: $text";
-    }
-    my $applies;
-    if ( $type =~ m/^dir/ ) {
-        $applies = 'dir';
-    }
-    elsif ( $type eq 'filename' ) {
-        $applies = 'file';
-    }
-    elsif ( $type eq 'pathname' ) {
-        $applies = 'path';
-    }
-    elsif ( $type eq 'title' ) {
-        $applies = 'title';
-    }
-    else {
-
-        # can't get here if regex matched in the first place...
-        croak "Bad FileRule type: $type";
-    }
-    my $rule = {
-        applies_to => $applies,
-        type       => $type,
-        action     => $action,
-        re         => $re,
-    };
-
-    # cache
-    $self->{_file_rules}->{$text} = $rule;
-    return $rule;
-}
-
-sub _apply_file_rule {
-    my ( $self, $file, $rule ) = @_;
-    my $skip = 0;
-    my ( $volume, $dirname, $filename ) = File::Spec->splitpath($file);
-
-    $self->debug and warn dump $rule;
-    $self->debug and warn "dirname=$dirname   filename=$filename";
-
-    if ( $rule->{action} eq 'is' ) {
-        $skip = $rule->{re} eq $filename ? 1 : 0;
-    }
-    elsif ( $rule->{action} eq 'contains' ) {
-        if ( $filename =~ m{$rule->{re}} ) {
-            $skip = 1;
-        }
-    }
-    elsif ( $rule->{action} eq 'regex' ) {
-        my $regex = $rule->{re};
-        $regex =~ s/^.|.$//;    # strip delimiter
-        if ( $filename =~ m{$regex} ) {
-            $skip = 1;
-        }
-    }
-
-    $self->debug and warn "FileRule for $file returns $skip";
-
-    return $skip;
-}
-
 sub _apply_file_rules {
     my ( $self, $file ) = @_;
-    if ( $self->config->FileRules ) {
-        $self->debug and warn "applying FileRules";
-        my $rules = $self->config->FileRules;
+    if ( !exists $self->{_file_rules} && $self->config->FileRules ) {
 
-        #warn dump $rules;
-        for my $line (@$rules) {
-            my $rule = $self->_parse_file_rule($line);
-            if ( $rule->{applies_to} eq 'dir' and -d $file ) {
-                return $self->_apply_file_rule( $file, $rule );
-            }
-            elsif ( $rule->{applies_to} eq 'file' and -f $file ) {
-                return $self->_apply_file_rule( $file, $rule );
-            }
-        }
+        # cache obj
+        $self->{_file_rules} = File::Rules->new( $self->config->FileRules );
+    }
+    if ( exists $self->{_file_rules} ) {
+        $self->debug and warn "applying FileRules";
+        my $match = $self->{_file_rules}->match($file);
+        return $match;
     }
     return 0;    # no rules
 }
@@ -332,6 +253,10 @@ sub _do_file {
     }
     else {
         $self->debug and warn "skipping file $file\n";
+        if ( $self->verbose & 4 ) {
+            local $| = 1;
+            print "skipping $file\n";
+        }
     }
 }
 
@@ -366,10 +291,15 @@ sub crawl {
         find(
             {   wanted => sub {
 
-                    my $path = $File::Find::name;
+                    # canonpath cleans up any leading .
+                    my $path = File::Spec->canonpath($File::Find::name);
 
                     if (-d) {
                         unless ( $self->dir_ok( $path, [ stat(_) ] ) ) {
+                            if ( $self->verbose & 2 ) {
+                                local $| = 1;
+                                print "skipping $path\n";
+                            }
                             $File::Find::prune = 1;
                             return;
                         }

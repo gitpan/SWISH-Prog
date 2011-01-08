@@ -214,3 +214,5 @@ Revision history for Perl extension Prog.
         * bump SWISH::3 (optional) dependency to 0.09
         * fix MailFS aggregator to preserve filesystem paths as Doc url
 
+0.49    07 Jan 2011
+        * refactor FileRules feature into File::Rules module

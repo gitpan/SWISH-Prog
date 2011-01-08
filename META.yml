@@ -32,6 +32,7 @@ requires:
   Config::General: 2.31
   Data::Dump: 0
   File::Basename: 0
+  File::Rules: 0
   File::Slurp: 0
   File::Temp: 0
   MIME::Types: 0
@@ -51,4 +52,4 @@ resources:
   homepage: http://dev.swish-e.org/wiki/perl
   license: http://dev.perl.org/licenses/
   repository: http://svn.swish-e.org/perl/SWISH-Prog/
-version: 0.48
+version: 0.49
