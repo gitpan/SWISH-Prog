@@ -7,7 +7,7 @@ use Carp;
 use Data::Dump qw( dump );
 use SWISH::Prog::Config;
 
-our $VERSION = '0.49';
+our $VERSION = '0.50';
 
 __PACKAGE__->mk_accessors(
     qw( invindex config count clobber flush started test_mode ));
@@ -105,6 +105,16 @@ Opens the invindex() objet and sets the started() time to time().
 
 sub start {
     my $self = shift;
+    if ( !defined $self->invindex ) {
+        croak "Missing invindex object";
+    }
+    if (   !blessed( $self->invindex )
+        or !$self->invindex->can('open') )
+    {
+        croak
+            "Invalid invindex: either not blessed object or does not implement 'open' method";
+    }
+
     $self->invindex->open;
     $self->{started} = time();
 }

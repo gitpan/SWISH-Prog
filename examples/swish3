@@ -12,7 +12,7 @@ use Data::Dump qw( dump );
 use Rose::DateTime::Util qw(parse_date);
 use Time::HiRes;
 
-my $VERSION = '3.0.8';
+my $VERSION = '3.0.9';
 
 my $USAGE = qq{$0
  usage:
@@ -43,6 +43,7 @@ my $USAGE = qq{$0
     -l : follow symbolic links when indexing
     -M : merges index files
     -N : index only files with a modification date newer than path or date
+         if no argument, defaults to [indexdir/swish_last_start]
     -S : specify which aggregator to use.
         Valid options are:
          "fs" - local files in your File System
@@ -124,7 +125,7 @@ my %allopts = (
     'test_mode'           => 'set with SWISH_TEST env var',
     'extended_output|x=s' => 'extended output format string',
     'Limit=s'             => 'Limit to range of values',
-    'newer_than|N=s'      => 'index only documents newer than',
+    'newer_than|N:s'      => 'index only documents newer than',
     'links'               => 'follow symbolic links when indexing',
     'Merge'               => 'merge 2 or more indexes',
     'Headers=i'           => 'Header output verbosity',
@@ -181,7 +182,12 @@ for ( keys %$Opt ) {
 }
 if ( $Opt->{input} ) {
     my $prog = SWISH::Prog->new(%prog_can);
-    if ( $Opt->{newer_than} ) {
+    if ( defined $Opt->{newer_than} ) {
+
+        if ( !length $Opt->{newer_than} ) {
+            $Opt->{newer_than}
+                = $prog->indexer->invindex->path->file('swish_last_start');
+        }
 
         # if it's a file, stat it,
         # otherwise convert to timestamp
@@ -208,6 +214,7 @@ if ( $Opt->{input} ) {
     if ( $Opt->{Expected} ) {
         $prog->aggregator->progress( progress_bar( $Opt->{Expected} ) );
     }
+    $prog->indexer->invindex->path->file('swish_last_start')->touch();
     my $start    = time();
     my $num_docs = $prog->index(@ARGV);
     my $end      = time();

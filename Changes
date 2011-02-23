@@ -216,3 +216,8 @@ Revision history for Perl extension Prog.
 
 0.49    07 Jan 2011
         * refactor FileRules feature into File::Rules module
+
+0.50    22 Feb 2011
+        * make swish3 -N flag argument optional, defaulting to indexdir/swish_last_start
+        * error check in base Indexer for valid invindex param
+        * misc doc fixes

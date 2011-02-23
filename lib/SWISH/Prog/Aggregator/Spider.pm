@@ -15,7 +15,7 @@ __PACKAGE__->mk_accessors(
 
 #use LWP::Debug qw(+);
 
-our $VERSION = '0.49';
+our $VERSION = '0.50';
 
 # TODO make these configurable
 my %parser_types = %SWISH::Prog::Utils::ParserTypes;
@@ -428,7 +428,7 @@ sub get_doc {
 =head2 crawl( I<uri> )
 
 Implements the required crawl() method. Recursively fetches I<uri>
-and its child links to a depth set in depth().
+and its child links to a depth set in max_depth().
 
 =cut
 
