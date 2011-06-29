@@ -9,7 +9,7 @@ use Scalar::Util qw( blessed );
 use SWISH::Prog::Config;
 use SWISH::Prog::InvIndex;
 
-our $VERSION = '0.50';
+our $VERSION = '0.51';
 
 __PACKAGE__->mk_accessors(qw( aggregator test_mode ));
 
@@ -76,6 +76,7 @@ my %ishort = (
     native => 'SWISH::Prog::Native::Indexer',
     xapian => 'SWISH::Prog::Xapian::Indexer',
     ks     => 'SWISH::Prog::KSx::Indexer',
+    lucy   => 'SWISH::Prog::Lucy::Indexer',
     dbi    => 'SWISH::Prog::DBI::Indexer',
 );
 

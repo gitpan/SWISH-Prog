@@ -35,7 +35,7 @@ my $USAGE = qq{$0
     -D : Debug mode
     -E : next param is total expected files (generates progress bar)
     -f : invindex dir to create or search from [index.swish3]
-    -F : next param is invindex format (ks, xapian, native, or dbi) [native]
+    -F : next param is invindex format (ks, lucy, xapian, native, or dbi) [native]
     -i : create an index from the specified files
         for "-S fs" - specify a list of files or directories
         for "-S spider" - specify a list of URLs
@@ -59,7 +59,7 @@ my $USAGE = qq{$0
     #-E : Append errors to file specified, or stderr if file not specified.
     #-e : "Economic Mode": The index proccess uses less RAM.
     -f : invindex dir to create or search from [index.swish3]
-    -F : next param is invindex format (ks, xapian, native, or dbi) [native]
+    -F : next param is invindex format (ks, lucy, xapian, native, or dbi) [native]
     -h : print this usage statement
     -H : "Result Header Output": verbosity (0 to 9)  [1].
     #-k : Print words starting with a given char.
@@ -115,7 +115,7 @@ my %allopts = (
     'debug|Debug'         => 'debugging',
     'Warnings=i'          => 'print libxml2 warnings',
     'aggregator|Source=s' => 'aggregator type',
-    'Format=s'            => 'indexer type (native, ks, xapian, dbi)',
+    'Format=s'            => 'indexer type (native, ks, lucy, xapian, dbi)',
     'query|words=s'       => 'search query',
     'input'               => 'indexing mode',
     'folder=s'            => 'invindex dir',
