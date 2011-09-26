@@ -16,7 +16,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.51';
+our $VERSION = '0.52';
 
 my $XML = Search::Tools::XML->new;
 
@@ -27,6 +27,11 @@ my %unique = map { $_ => 1 } qw(
     PropertyNames
     PropertyNamesNoStripChars
     IncludeConfigFile
+);
+
+my %takes_single_value = map { $_ => 1 } qw(
+    IndexFile
+    FuzzyIndexingMode
 );
 
 my @Opts = qw(
@@ -252,6 +257,9 @@ sub _get {
 
     if ( exists $unique{$key} ) {
         return $self->_name_hash($key);
+    }
+    elsif ( exists $takes_single_value{$key} ) {
+        return $self->{$key}->[0];
     }
     else {
         return $self->{$key};
@@ -544,7 +552,6 @@ sub ver2_to_ver3 {
         IgnoreFirstChar
         IgnoreLastChar
         MaxDepth
-        ReplaceRules
         SpiderDirectory
         SwishProgParameters
         TmpDir
@@ -555,10 +562,10 @@ sub ver2_to_ver3 {
     my $class = ref($self) || $self;
     my $config = $file ? $class->new->read2($file) : $self->as_hash;
     my $time = $no_timestamp ? '' : localtime();
-    
+
     # if we were not passed a file name, all the config resolution
     # has already been done, so do not perpetuate.
-    if (!$file) {
+    if ( !$file ) {
         delete $config->{IncludeConfigFile};
     }
 
@@ -686,7 +693,7 @@ KEY: for my $k ( sort keys %$config ) {
             for my $line (@args) {
                 my ( $parser_type, $tag, $len )
                     = ( $line =~ m/^(XML|HTML|TXT)[2\*]? +<(.+?)> ?(\d*)$/ );
-                if (!$tag) {
+                if ( !$tag ) {
                     warn "unparsed config2 line for StoreDescription: $line";
                     next;
                 }
@@ -801,6 +808,16 @@ KEY: for my $k ( sort keys %$config ) {
                 $tag );
         }
     }
+    if ( $conf3{FuzzyIndexingMode} ) {
+        $xml .= sprintf(
+            "  <%s>%s</%s>\n",
+            "Stemmer",
+            $XML->escape(
+                $self->get_stemmer_lang( $conf3{FuzzyIndexingMode} )
+            ),
+            "Stemmer"
+        );
+    }
     $xml .= " </Index>\n";
 
     if ( keys %$mimes ) {
@@ -835,6 +852,23 @@ KEY: for my $k ( sort keys %$config ) {
 sub _make_tag {
     my ( $self, $tag, $attrs ) = @_;
     return $XML->tag_safe($tag) . $XML->attr_safe($attrs);
+}
+
+=head2 get_stemmer_lang([ I<fuzzymode> ])
+
+Returns the 2-letter language code for the Snowball stemmer
+corresponding to I<fuzzymode>. If I<fuzzymode> is not defined,
+calls FuzzyIndexingMode() method on the config object.
+
+=cut
+
+sub get_stemmer_lang {
+    my $self = shift;
+    my $lang = shift || $self->FuzzyIndexingMode;
+    if ( $lang and $lang =~ m/^Stemming_(\w\w)/ ) {
+        return $1;
+    }
+    return 'none';
 }
 
 sub AUTOLOAD {

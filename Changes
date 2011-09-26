@@ -224,3 +224,10 @@ Revision history for Perl extension Prog.
 
 0.51    28 June 2011
         * add 'Lucy' backend
+
+0.52    26 Sept 2011
+        * add support for IndexFile config option
+        * add --lucy_highlightable option to swish3
+        * new class SWISH::Prog::ReplaceRules for backcompat
+        * add get_stemmer_lang() method to Config class for Snowball stemmer forward-compat.
+

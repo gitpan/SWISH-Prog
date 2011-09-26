@@ -29,6 +29,7 @@ lib/SWISH/Prog/Native/InvIndex.pm
 lib/SWISH/Prog/Native/Result.pm
 lib/SWISH/Prog/Native/Searcher.pm
 lib/SWISH/Prog/Queue.pm
+lib/SWISH/Prog/ReplaceRules.pm
 lib/SWISH/Prog/Result.pm
 lib/SWISH/Prog/Results.pm
 lib/SWISH/Prog/Searcher.pm
@@ -51,6 +52,8 @@ t/11-leak-test.t
 t/12-merge.t
 t/13_mail_fs.t
 t/14-search.t
+t/15-index-file-config.t
+t/16-replace-rules.t
 t/config2/complex.conf
 t/config2/example1.config
 t/config2/example2.config

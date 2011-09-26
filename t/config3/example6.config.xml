@@ -11,7 +11,6 @@
  <!-- WARNING: IgnoreLastChar ignored by Swish3 -->
  <IgnoreLastChar>.-</IgnoreLastChar>
  <IgnoreWords>file: stopwords/my_stopwords.txt</IgnoreWords>
- <!-- WARNING: ReplaceRules ignored by Swish3 -->
  <ReplaceRules>replace swish-e.org localhost</ReplaceRules>
  <SourceDir>../prog-bin/spider.pl</SourceDir>
  <!-- WARNING: SwishProgParameters ignored by Swish3 -->

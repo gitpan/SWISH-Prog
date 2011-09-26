@@ -15,7 +15,7 @@ __PACKAGE__->mk_accessors(
 
 #use LWP::Debug qw(+);
 
-our $VERSION = '0.51';
+our $VERSION = '0.52';
 
 # TODO make these configurable
 my %parser_types = %SWISH::Prog::Utils::ParserTypes;
@@ -140,7 +140,7 @@ sub init {
 =head2 uri_ok( I<uri> )
 
 Returns true if I<uri> is acceptable for including in an index.
-The 'ok-ness' of the I<uri> is based on it's base, robot rules,
+The 'ok-ness' of the I<uri> is based on its base, robot rules,
 and the spider configuration.
 
 =cut

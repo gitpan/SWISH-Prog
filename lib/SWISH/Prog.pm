@@ -8,8 +8,9 @@ use Data::Dump qw( dump );
 use Scalar::Util qw( blessed );
 use SWISH::Prog::Config;
 use SWISH::Prog::InvIndex;
+use SWISH::Prog::ReplaceRules;
 
-our $VERSION = '0.51';
+our $VERSION = '0.52';
 
 __PACKAGE__->mk_accessors(qw( aggregator test_mode ));
 
@@ -81,9 +82,15 @@ my %ishort = (
 );
 
 sub init {
-    my $self   = shift;
-    my %arg    = @_;
-    my $filter = delete $arg{filter};    # no such method. just convenience.
+    my $self = shift;
+    my %arg  = @_;
+
+    # no such method. just convenience.
+    my $filter = delete $arg{filter};
+
+    # no such method, but pass through to Lucy if applicable.
+    my $highlightable_fields = delete $arg{highlightable_fields};
+
     $self->SUPER::init(%arg);
 
     # search mode requires only invindex
@@ -117,13 +124,20 @@ sub init {
         if ($@) {
             croak "invalid indexer $indexer: $@";
         }
-        $indexer = $indexer->new(
+        my %indexer_opts = (
             debug     => $self->debug,
             invindex  => $self->{invindex},    # may be undef
             verbose   => $self->verbose,
             config    => $config,              # may be undef
             test_mode => $self->test_mode,
         );
+        if ( $indexer->isa('SWISH::Prog::Lucy::Indexer') ) {
+            $indexer_opts{highlightable_fields} = $highlightable_fields;
+        }
+
+        $self->debug and warn "indexer opts: " . dump( \%indexer_opts );
+
+        $indexer = $indexer->new(%indexer_opts);
     }
     elsif ( !$indexer->isa('SWISH::Prog::Indexer') ) {
         croak "$indexer is not a SWISH::Prog::Indexer-derived object";
@@ -153,12 +167,32 @@ sub init {
         croak "$aggregator is not a SWISH::Prog::Aggregator-derived object";
     }
 
+    # set these now so we can call $self->config
+    $self->{aggregator} = $aggregator;
+    $self->{indexer}    = $indexer;
+
+    if ( $self->config and $self->config->ReplaceRules ) {
+
+        # create a CODE ref that uses the ReplaceRules
+        my $rr    = $self->config->ReplaceRules;
+        my $rules = SWISH::Prog::ReplaceRules->new(@$rr);
+        if ($filter) {
+            my $filter_copy = $filter;
+            $filter = sub {
+                $_[0]->url( $rules->apply( $_[0]->url ) );
+                $filter_copy->( $_[0] );
+            };
+        }
+        else {
+            $filter = sub {
+                $_[0]->url( $rules->apply( $_[0]->url ) );
+            };
+        }
+    }
+
     if ($filter) {
         $aggregator->set_filter($filter);
     }
-
-    $self->{aggregator} = $aggregator;
-    $self->{indexer}    = $indexer;
 
     $indexer->{test_mode} = $self->{test_mode}
         unless exists $indexer->{test_mode};

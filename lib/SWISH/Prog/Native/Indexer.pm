@@ -9,7 +9,7 @@ use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 use File::Copy ();
 
-our $VERSION = '0.51';
+our $VERSION = '0.52';
 
 my $invindex_class = 'SWISH::Prog::Native::InvIndex';
 
@@ -91,7 +91,7 @@ sub init {
     $self->{config} ||= SWISH::Prog::Config->new;
 
     # default index
-    $self->{invindex} ||= $invindex_class->new;
+    $self->{invindex} ||= $self->{config}->IndexFile || $invindex_class->new;
 
     if ( $self->{invindex} && !blessed( $self->{invindex} ) ) {
         $self->{invindex} = $invindex_class->new( path => $self->{invindex} );

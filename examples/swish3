@@ -12,7 +12,7 @@ use Data::Dump qw( dump );
 use Rose::DateTime::Util qw(parse_date);
 use Time::HiRes;
 
-my $VERSION = '3.0.9';
+my $VERSION = '3.0.10';
 
 my $USAGE = qq{$0
  usage:
@@ -84,28 +84,29 @@ SWISH::Prog::VERSION : $SWISH::Prog::VERSION
 };
 
 my $Opt = {
-    help            => 0,
-    verbose         => undef,
-    Version         => 0,
-    Debug           => 0,
-    config          => '',                      #SWISH::Prog::Config->new
-    Warnings        => 2,
-    Source          => 'fs',
-    Format          => 'native',
-    query           => '',
-    input           => 0,
-    folder          => 'index.swish3',
-    begin           => 0,
-    max             => undef,
-    test_mode       => $ENV{SWISH_TEST} || 0,
-    extended_output => undef,
-    Limit           => [],
-    newer_than      => undef,
-    links           => 0,
-    Merge           => undef,
-    Headers         => 1,
-    sort_order      => '',
-    Expected        => undef,
+    help               => 0,
+    verbose            => undef,
+    Version            => 0,
+    Debug              => 0,
+    config             => '',
+    Warnings           => 2,
+    Source             => 'fs',
+    Format             => 'native',
+    query              => '',
+    input              => 0,
+    folder             => undef,
+    begin              => 0,
+    max                => undef,
+    test_mode          => $ENV{SWISH_TEST} || 0,
+    extended_output    => undef,
+    Limit              => [],
+    newer_than         => undef,
+    links              => 0,
+    Merge              => undef,
+    Headers            => 1,
+    sort_order         => '',
+    Expected           => undef,
+    lucy_highlightable => 0,
 };
 
 my %allopts = (
@@ -132,6 +133,7 @@ my %allopts = (
     'RankScheme=i'        => 'ranking algorithm (native only)',
     'sort_order=s'        => 'result sort order',
     'Expected=i'          => 'expected total docs (generates progress bar)',
+    'lucy_highlightable'  => 'set highlightable_fields for Lucy indexer',
 );
 
 my %native_only_opts = ( 'RankScheme' => 1, );
@@ -174,7 +176,8 @@ if ( !exists $ENV{SWISH_WARNINGS} ) {
     $ENV{SWISH_WARNINGS} = $Opt->{Warnings};
 }
 
-my %prog_can;
+my %prog_can = ( highlightable_fields => $Opt->{lucy_highlightable}, );
+
 for ( keys %$Opt ) {
     if ( SWISH::Prog->can($_) ) {
         $prog_can{$_} = $Opt->{$_};
