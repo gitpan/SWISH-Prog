@@ -26,8 +26,12 @@ SKIP: {
         "config from t/test.conf" );
 
     # skip our local config test files
-    $config->FileRules('dirname contains config');
-    $config->FileRules( 'filename is swish.xml', 1 );
+    $config->FileRules( 'dirname contains config',              1 );
+    $config->FileRules( 'filename is swish.xml',                1 );
+    $config->FileRules( 'filename contains \.t',                1 );
+    $config->FileRules( 'dirname contains (testindex|\.index)', 1 );
+    $config->FileRules( 'filename contains \.conf',             1 );
+    $config->FileRules( 'dirname contains mailfs',              1 );
 
     ok( my $indexer = SWISH::Prog::Native::Indexer->new(
             invindex => $invindex,

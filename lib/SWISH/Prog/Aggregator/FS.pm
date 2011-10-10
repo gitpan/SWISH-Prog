@@ -9,7 +9,12 @@ use File::Find;
 use File::Rules;
 use Data::Dump qw( dump );
 
-our $VERSION = '0.52';
+our $VERSION = '0.53';
+
+# we rely on file extensions to determine content type
+# and thus parser type. If a file has no extension,
+# assume this one.
+our $DEFAULT_EXTENSION = 'txt';
 
 =pod
 
@@ -94,8 +99,10 @@ sub file_ok {
 
     $self->debug and warn "path=$path file=$file ext=$ext\n";
 
-    return 0 unless $ext;
-    return 0 if $full_path =~ m![\\/](\.svn|RCS)[\\/]!; # TODO configure this.
+    # treat no extension like plain text
+    $ext = $DEFAULT_EXTENSION unless length $ext;
+
+    # TODO configure this for HiddenFiles
     return 0 if $file =~ m/^\./;
 
     #carp "parsed file: $file\npath: $path\next: $ext";

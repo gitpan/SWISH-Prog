@@ -7,7 +7,7 @@ build_requires:
 configure_requires:
   ExtUtils::MakeMaker: 6.42
 distribution_type: module
-generated_by: 'Module::Install version 0.91'
+generated_by: 'Module::Install version 0.92'
 license: http://dev.perl.org/licenses/
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -52,4 +52,4 @@ resources:
   homepage: http://dev.swish-e.org/wiki/perl
   license: http://dev.perl.org/licenses/
   repository: http://svn.swish-e.org/perl/SWISH-Prog/
-version: 0.52
+version: 0.53

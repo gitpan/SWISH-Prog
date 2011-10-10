@@ -10,7 +10,7 @@ use SWISH::Prog::Config;
 use SWISH::Prog::InvIndex;
 use SWISH::Prog::ReplaceRules;
 
-our $VERSION = '0.52';
+our $VERSION = '0.53';
 
 __PACKAGE__->mk_accessors(qw( aggregator test_mode ));
 

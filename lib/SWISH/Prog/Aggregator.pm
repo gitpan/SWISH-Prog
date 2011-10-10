@@ -9,7 +9,7 @@ use SWISH::Prog::Doc;
 use Scalar::Util qw( blessed );
 use Data::Dump qw( dump );
 
-our $VERSION = '0.52';
+our $VERSION = '0.53';
 
 __PACKAGE__->mk_accessors(
     qw(
@@ -130,13 +130,6 @@ sub init {
     $self->{verbose} ||= 0;
     $self->{__progress_so_far} = 0;
     $self->{__progress_next}   = 0;
-
-    if (   !$self->{indexer}
-        or !blessed( $self->{indexer} )
-        or !$self->{indexer}->isa('SWISH::Prog::Indexer') )
-    {
-        croak "SWISH::Prog::Indexer-derived object required to crawl()";
-    }
 
     $self->{doc_class} ||= 'SWISH::Prog::Doc';
     $self->{swish_filter_obj} ||= SWISH::Filter->new;

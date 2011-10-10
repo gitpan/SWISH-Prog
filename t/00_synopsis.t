@@ -28,8 +28,12 @@ SKIP: {
     );
 
     # skip our local config test files
-    $program->config->FileRules( 'dirname contains config', 1 );
-    $program->config->FileRules( 'filename is swish.xml',   1 );
+    $program->config->FileRules( 'dirname contains config',              1 );
+    $program->config->FileRules( 'filename is swish.xml',                1 );
+    $program->config->FileRules( 'filename contains \.t',                1 );
+    $program->config->FileRules( 'dirname contains (testindex|\.index)', 1 );
+    $program->config->FileRules( 'filename contains \.conf',             1 );
+    $program->config->FileRules( 'dirname contains mailfs',              1 );
 
     ok( $program->run('t/'), "run program" );
 

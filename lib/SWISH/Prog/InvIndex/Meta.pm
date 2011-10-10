@@ -5,7 +5,7 @@ use base qw( SWISH::Prog::Class );
 use Carp;
 use XML::Simple;
 
-our $VERSION = '0.52';
+our $VERSION = '0.53';
 
 __PACKAGE__->mk_accessors(qw( invindex ));
 __PACKAGE__->mk_ro_accessors(qw( file ));
@@ -17,6 +17,9 @@ sub init {
     my $self = shift;
     $self->SUPER::init(@_);
     $self->{file} ||= $self->invindex->path->file('swish.xml');
+    if (!-s $self->{file}) {
+        confess("No such file: $self->{file}");
+    }
     $self->{data} = XMLin("$self->{file}");
 
     #warn Data::Dump::dump( $self->{data} );
