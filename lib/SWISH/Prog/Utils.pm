@@ -6,7 +6,7 @@ use Data::Dump qw( dump );
 use File::Basename;
 use Search::Tools::XML;
 
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 =pod
 
@@ -56,6 +56,8 @@ our %ParserTypes = (
     'default'            => 'HTML*',
 );
 
+our $DefaultExtension = 'html';
+
 # cache to avoid hitting MIME::Type each time
 my %ext2mime = (
     doc  => 'application/msword',
@@ -98,7 +100,7 @@ sub mime_type {
     my $url  = shift or return;
     my $ext  = lc( shift || ( $self->path_parts($url) )[2] );
     $ext =~ s/^\.//;
-    $ext ||= 'html';
+    $ext ||= $DefaultExtension;
 
     #warn "$url => $ext";
     if ( !exists $ext2mime{$ext} and $mime_types ) {

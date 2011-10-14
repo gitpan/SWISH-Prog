@@ -9,7 +9,7 @@ use File::Find;
 use File::Rules;
 use Data::Dump qw( dump );
 
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 # we rely on file extensions to determine content type
 # and thus parser type. If a file has no extension,

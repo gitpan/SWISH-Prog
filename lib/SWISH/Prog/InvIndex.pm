@@ -13,7 +13,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 __PACKAGE__->mk_accessors(qw( path clobber ));
 

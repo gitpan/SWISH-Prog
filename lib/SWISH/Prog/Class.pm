@@ -7,7 +7,7 @@ use Data::Dump qw( dump );
 use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 __PACKAGE__->mk_accessors(qw( debug verbose warnings ));
 
@@ -61,7 +61,7 @@ Get/set flags affecting the verbosity of the program.
 sub init {
     my $self = shift;
     $self->SUPER::init(@_);
-    $self->{debug} ||= $ENV{PERL_DEBUG} || 0;
+    $self->{debug}   ||= $ENV{PERL_DEBUG}   || 0;
     $self->{verbose} ||= $ENV{PERL_VERBOSE} || 0;
     $self->{_start} = time();
     return $self;
@@ -105,6 +105,9 @@ sub verify_isa_swish_prog_config {
         $config2_object = SWISH::Prog::Config->new();
     }
     elsif ( !blessed($config2) && -r $config2 ) {
+        $config2_object = SWISH::Prog::Config->new($config2);
+    }
+    elsif ( !blessed($config2) && ref $config2 eq 'HASH' ) {
         $config2_object = SWISH::Prog::Config->new($config2);
     }
     elsif ( blessed($config2) ) {

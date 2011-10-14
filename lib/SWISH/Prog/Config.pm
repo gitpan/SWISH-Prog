@@ -16,7 +16,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 my $XML = Search::Tools::XML->new;
 
@@ -189,7 +189,14 @@ sub new {
     else {
         %args = %{ $_[0] };
     }
-    my $self = $class->SUPER::new( \%args );
+
+    # do our own init here because we rely on AUTOLOAD magic
+    my $self = bless {}, $class;
+    for my $k ( keys %args ) {
+        $self->$k( $args{$k} );
+    }
+
+    # set some defaults
     $self->{'_start'} = time;
     $self->IgnoreTotalWordCountWhenRanking(0)
         unless defined $self->IgnoreTotalWordCountWhenRanking;
