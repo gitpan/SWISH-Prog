@@ -11,7 +11,7 @@ SKIP: {
     # is executable present?
     my $test = SWISH::Prog::Native::Indexer->new;
     if ( !$test->swish_check ) {
-        skip "swish-e not installed", 4;
+        skip "swish-e not installed", 3;
     }
 
     ok( my $config = SWISH::Prog::Config->new('t/test.conf'),

@@ -243,3 +243,7 @@ Revision history for Perl extension Prog.
         * $SWISH::Prog::Utils::DefaultExtension now let's you configure default file extension
         * fix SWISH::Prog::Config->new() to support perldoc's claims of passing in a hashref
           or named attribute pairs.
+
+0.55    6 Nov 2011
+        * fix skip test count in t/15
+
