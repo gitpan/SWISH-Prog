@@ -247,3 +247,6 @@ Revision history for Perl extension Prog.
 0.55    6 Nov 2011
         * fix skip test count in t/15
 
+0.56    2 Apr 2012
+        * make swish3 stdin/stdout utf8 safe
+

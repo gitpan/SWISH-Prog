@@ -7,7 +7,7 @@ use Carp;
 use Data::Dump qw( dump );
 use SWISH::Prog::Config;
 
-our $VERSION = '0.55';
+our $VERSION = '0.56';
 
 __PACKAGE__->mk_accessors(
     qw( invindex config count clobber flush started test_mode ));

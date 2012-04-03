@@ -11,8 +11,12 @@ use Getopt::Long qw(:config no_ignore_case);
 use Data::Dump qw( dump );
 use Rose::DateTime::Util qw(parse_date);
 use Time::HiRes;
+use Search::Tools::UTF8;
 
-my $VERSION = '3.0.11';
+binmode STDERR, ':utf8';
+binmode STDOUT, ':utf8';
+
+my $VERSION = '3.0.12';
 
 my $USAGE = qq{$0
  usage:
@@ -235,7 +239,7 @@ elsif ( $Opt->{query} ) {
     my $searcher   = $sclass->new( invindex => $invindex->path . '', );
     my $start_time = Time::HiRes::time();
     my $results    = $searcher->search(
-        $Opt->{query},
+        to_utf8($Opt->{query}),
         {   start       => $Opt->{begin},
             max         => $Opt->{max},
             limit       => parse_limits( $Opt->{Limit} ),
@@ -248,7 +252,7 @@ elsif ( $Opt->{query} ) {
     if ( $Opt->{Headers} ) {
         printf( "# swish3 version %s\n", $VERSION );
         printf( "# Format: %s\n",        $format );
-        printf( "# Query: %s\n",         $Opt->{query} );
+        printf( "# Query: %s\n",         to_utf8($Opt->{query}) );
         printf( "# Hits: %d\n",          $results->hits );
         printf( "# Search time: %.4f\n", $search_time );
     }
@@ -306,7 +310,7 @@ elsif ( $Opt->{query} ) {
                 }
                 $val = '' unless defined $val;
                 $val =~ s/\003/\\x{03}/g;
-                push( @res, $val );
+                push( @res, to_utf8($val) );
             }
             printf( $output_format_str, @res );
         }

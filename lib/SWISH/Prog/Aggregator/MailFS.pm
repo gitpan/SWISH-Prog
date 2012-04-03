@@ -7,7 +7,7 @@ use SWISH::Prog::Aggregator::Mail;    # delegate doc creation
 use Carp;
 use Data::Dump qw( dump );
 
-our $VERSION = '0.55';
+our $VERSION = '0.56';
 
 =pod
 

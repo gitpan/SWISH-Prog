@@ -13,7 +13,7 @@ use Scalar::Util qw( blessed );
 __PACKAGE__->mk_accessors(
     qw( methods class title url modtime serial_format ));
 
-our $VERSION = '0.55';
+our $VERSION = '0.56';
 
 my $XMLer = Search::Tools::XML->new();    # included in Utils
 
