@@ -15,7 +15,7 @@ __PACKAGE__->mk_accessors(
 
 #use LWP::Debug qw(+);
 
-our $VERSION = '0.56';
+our $VERSION = '0.57';
 
 # TODO make these configurable
 my %parser_types = %SWISH::Prog::Utils::ParserTypes;
@@ -113,7 +113,7 @@ sub init {
     $self->{email}         ||= 'swish@user.failed.to.set.email.invalid';
     $self->{max_wait_time} ||= 30;
     $self->{max_size}      ||= 5_000_000;
-    $self->{max_depth} = 0 unless defined( $self->{max_depth} );
+    $self->{max_depth} = 1 unless defined( $self->{max_depth} );
     $self->{delay}     = 5 unless defined $self->{delay};
     croak "delay must be expressed in seconds" if $self->{delay} =~ m/\D/;
 
@@ -152,7 +152,7 @@ sub uri_ok {
     return 0 if $self->{_uri_ok_cache}->has($str);
     $self->{_uri_ok_cache}->add($str);
 
-    #warn "uri_ok: $str\n";
+    $self->debug and warn "checking uri_ok: $str\n";
 
     # check base
     if ( $uri->rel( $self->{_base} ) eq $uri ) {
@@ -164,7 +164,7 @@ sub uri_ok {
 
     if ( !exists $parser_types{$mime} ) {
 
-        #warn "no parser for $mime";
+        $self->debug and warn "no parser for $mime";
         return 0;
     }
 
@@ -331,6 +331,10 @@ sub get_doc {
     my $uri   = $self->queue->get;
     my $depth = $self->uri_cache->get($uri);
 
+    $self->debug
+        and warn
+        sprintf( "depth=%d max_depth=%d\n", $depth, $self->max_depth );
+
     return if $depth > $self->max_depth;
 
     # get our useragent
@@ -439,6 +443,7 @@ sub crawl {
     my $indexer = $self->indexer;
 
     for my $url (@urls) {
+        $self->debug and warn "crawling $url\n";
         my $uri = URI->new($url);
         $self->uri_cache->add( $uri => 1 );
         $self->queue->put($uri);

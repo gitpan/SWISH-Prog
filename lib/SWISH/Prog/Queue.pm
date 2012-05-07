@@ -4,7 +4,7 @@ use warnings;
 use base qw( SWISH::Prog::Class );
 use Carp;
 
-our $VERSION = '0.56';
+our $VERSION = '0.57';
 
 =pod
 

@@ -250,3 +250,6 @@ Revision history for Perl extension Prog.
 0.56    2 Apr 2012
         * make swish3 stdin/stdout utf8 safe
 
+0.57    7 May 2012
+        * change default max_depth in Spider to 1 (makes it actually work by default)
+
