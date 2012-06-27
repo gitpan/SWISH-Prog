@@ -253,3 +253,6 @@ Revision history for Perl extension Prog.
 0.57    7 May 2012
         * change default max_depth in Spider to 1 (makes it actually work by default)
 
+0.58    26 June 2012
+        * fix Config class for FuzzyIndexingMode conversion to XML (ver3)
+

@@ -16,7 +16,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.57';
+our $VERSION = '0.58';
 
 my $XML = Search::Tools::XML->new;
 
@@ -502,8 +502,6 @@ to SWISH::3::Config XML style.
 
 Converts I<file> to XML format and returns as XML string.
 
-B<NOTE:> This API is liable to change as SWISH::Config is developed.
-
   my $xmlconf = $config->ver2_to_ver3( 'my/file.config' );
 
 If I<file> is omitted, uses the current values in the calling object.
@@ -582,7 +580,8 @@ sub ver2_to_ver3 {
 <swish>
 EOF
 
-    #warn dump $config;
+    my $debug = ref($self) ? $self->debug : 0;
+    $debug and warn dump $config;
 
     # first convert the $config ver2 hash into a ver3 hash
     my %conf3 = (
@@ -598,7 +597,7 @@ EOF
 KEY: for my $k ( sort keys %$config ) {
         my @args = ref $config->{$k} ? @{ $config->{$k} } : ( $config->{$k} );
 
-        #warn "$k => " . dump( \@args );
+        $debug and warn "$k => " . dump( \@args );
 
         if ( $k eq 'MetaNames' ) {
             for my $line (@args) {
@@ -816,11 +815,12 @@ KEY: for my $k ( sort keys %$config ) {
         }
     }
     if ( $conf3{FuzzyIndexingMode} ) {
+        $debug and warn "got FuzzyIndexingMode: $conf3{FuzzyIndexingMode}->[0]";
         $xml .= sprintf(
             "  <%s>%s</%s>\n",
             "Stemmer",
             $XML->escape(
-                $self->get_stemmer_lang( $conf3{FuzzyIndexingMode} )
+                $self->get_stemmer_lang( $conf3{FuzzyIndexingMode}->[0] )
             ),
             "Stemmer"
         );
@@ -872,6 +872,7 @@ calls FuzzyIndexingMode() method on the config object.
 sub get_stemmer_lang {
     my $self = shift;
     my $lang = shift || $self->FuzzyIndexingMode;
+    $self->debug and warn "get_stemmer_lang for '$lang'";
     if ( $lang and $lang =~ m/^Stemming_(\w\w)/ ) {
         return $1;
     }
