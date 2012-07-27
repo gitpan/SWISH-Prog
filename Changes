@@ -256,3 +256,6 @@ Revision history for Perl extension Prog.
 0.58    26 June 2012
         * fix Config class for FuzzyIndexingMode conversion to XML (ver3)
 
+0.59    26 July 2012
+        * add FollowXInclude support for Swish3
+

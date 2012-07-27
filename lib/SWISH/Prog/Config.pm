@@ -16,7 +16,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.58';
+our $VERSION = '0.59';
 
 my $XML = Search::Tools::XML->new;
 
@@ -55,6 +55,7 @@ my @Opts = qw(
     FileMatch
     FileRules
     FollowSymLinks
+    FollowXInclude
     FuzzyIndexingMode
     HTMLLinksMetaName
     IgnoreFirstChar
