@@ -40,6 +40,7 @@ requires:
   Path::Class: 0
   Rose::DateTime: 0
   Rose::ObjectX::CAF: 0
+  SWISH::3: 1.000001
   SWISH::Filter: 0.15
   Scalar::Util: 0
   Search::Query: 0.17
@@ -53,4 +54,4 @@ resources:
   homepage: http://dev.swish-e.org/wiki/perl
   license: http://dev.perl.org/licenses/
   repository: http://svn.swish-e.org/perl/SWISH-Prog/
-version: 0.59
+version: 0.60

@@ -8,9 +8,10 @@ use Data::Dump qw( dump );
 use DBI;
 use SWISH::Prog::Utils;
 
-__PACKAGE__->mk_accessors(qw( db alias_columns schema ));
+__PACKAGE__->mk_accessors(
+    qw( db alias_columns schema use_quotes quote_char ));
 
-our $VERSION = '0.59';
+our $VERSION = '0.60';
 
 my $XMLer = Search::Tools::XML->new();    # included in Utils
 
@@ -47,6 +48,8 @@ SWISH::Prog::Aggregator::DBI - index DB records with Swish-e
                swishtitle       => 'title',
           }
         }
+        use_quotes      => 1,
+        quote_char      => '`', # backtick
         alias_columns   => 1,
         indexer         => SWISH::Prog::Indexer::Native->new,
     );
@@ -109,6 +112,16 @@ The C<alias_columns> flag indicates whether all columns should be searchable
 under the default MetaName of C<swishdefault>. The default is 1 (true). This
 is B<not> the default behaviour of swish-e; this is a feature of SWISH::Prog.
 
+=item use_quotes
+
+Boolean indicating whether column and table names should be quoted.
+This is typically DBD-specific (e.g., MySQL requires this be true).
+Default is true.
+
+=item quote_char
+
+The character to use when C<use_quotes> is true. Default is B<`> (backtick).
+
 =back
 
 B<NOTE:> The new() method simply inherits from SWISH::Prog::Aggregator, 
@@ -123,6 +136,9 @@ See SWISH::Prog::Class. This method does all the setup.
 sub init {
     my $self = shift;
     $self->SUPER::init(@_);
+
+    $self->{use_quotes} = 1   unless defined $self->{use_quotes};
+    $self->{quote_char} = '`' unless defined $self->{quote_char};
 
     # verify DBI connection
     if ( defined( $self->db ) ) {
@@ -244,10 +260,13 @@ T: for my $table (@tables) {
         my $desc  = delete( $table_info->{swishdescription} ) || {};
         my $title = delete( $table_info->{swishtitle} )       || '';
 
-        # TODO test other dbs besides mysql for quoting etc.
+        my $quote_char = $self->use_quotes ? $self->quote_char : '';
+
         my $c = $self->_do_table(
-            name  => $table . ".index",
-            sql   => "SELECT `" . join( '`,`', @cols ) . "` FROM $table",
+            name => $table . ".index",
+            sql  => "SELECT "
+                . join( ",", map {qq/$quote_char$_$quote_char/} @cols )
+                . " FROM $table",
             table => $table,
             desc  => $desc,
             title => $title,

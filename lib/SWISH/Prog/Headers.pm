@@ -8,7 +8,7 @@ use Carp;
 __PACKAGE__->mk_accessors(qw( version ));
 use bytes;    # so length() measures bytes
 
-our $VERSION = '0.59';
+our $VERSION = '0.60';
 our $AutoURL = time();
 our %Headers = (
     2 => {
@@ -91,16 +91,16 @@ SWISH::Prog::Headers - create document headers for Swish-e -S prog
 =head1 SYNOPSIS
 
   use SWISH::Prog::Headers;
-  use File::Slurp;
+  use SWISH::3;
   my $f = 'some/file.html';
-  my $buf = read_file( $f ):
+  my $buf = SWISH::3->slurp( $f ):
   my $headers = SWISH::Prog::Headers->new;
   print $headers->head( $buf, { url=>$f } ), $buf;
 
 =head1 DESCRIPTION
 
 SWISH::Prog::Headers generates the correct headers
-for feeding documents to the Swish-e indexer.
+for feeding documents to the indexer.
 
 =head1 VARIABLES
 

@@ -10,7 +10,7 @@ use Search::Query;
 
 __PACKAGE__->mk_accessors(qw( swish sao_opts result_class ));
 
-our $VERSION = '0.59';
+our $VERSION = '0.60';
 
 =head1 NAME
 

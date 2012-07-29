@@ -4,8 +4,9 @@ use warnings;
 use base qw( SWISH::Prog::Class );
 use Carp;
 use XML::Simple;
+use SWISH::3 qw( :constants );
 
-our $VERSION = '0.59';
+our $VERSION = '0.60';
 
 __PACKAGE__->mk_accessors(qw( invindex ));
 __PACKAGE__->mk_ro_accessors(qw( file ));
@@ -17,12 +18,48 @@ sub init {
     my $self = shift;
     $self->SUPER::init(@_);
     $self->{file} ||= $self->invindex->path->file('swish.xml');
-    if (!-s $self->{file}) {
+    if ( !-s $self->{file} ) {
         confess("No such file: $self->{file}");
     }
     $self->{data} = XMLin("$self->{file}");
 
     #warn Data::Dump::dump( $self->{data} );
+
+    my $props = $self->{data}->{PropertyNames};
+
+    # start with the built-in PropertyNames,
+    # which cannot be aliases for anything.
+    my %propnames = map { $_ => { alias_for => undef } }
+        keys %{ SWISH_DOC_PROP_MAP() };
+    $propnames{swishrank} = { alias_for => undef };
+    $propnames{score}     = { alias_for => undef };
+    my @pure_props;
+    my %prop_map;
+    for my $name ( keys %$props ) {
+        $propnames{$name} = { alias_for => undef };
+        if ( exists $props->{$name}->{alias_for} ) {
+            $propnames{$name}->{alias_for} = $props->{$name}->{alias_for};
+            $prop_map{$name} = $props->{$name}->{alias_for};
+        }
+        else {
+            push @pure_props, $name;
+        }
+    }
+    $self->{_propnames}  = \%propnames;
+    $self->{_pure_props} = \@pure_props;
+    $self->{_prop_map}   = \%prop_map;
+}
+
+sub get_properties {
+    return shift->{_propnames};
+}
+
+sub get_property_map {
+    return shift->{_prop_map};
+}
+
+sub get_pure_properties {
+    return shift->{_pure_props};
 }
 
 sub AUTOLOAD {
@@ -73,6 +110,18 @@ The full path to the C<swish.xml> file. This is a read-only accessor.
 
 The SWISH::Prog::InvIndex object which the SWISH::Prog::InvIndex::Meta
 object represents.
+
+=head2 get_properties
+
+Returns hashref of PropertyNames with aliases resolved.
+
+=head2 get_pure_properties
+
+Returns arrayref of PropertyName values, excluding aliases.
+
+=head2 get_property_map
+
+Returns hashref of alias names to pure names.
 
 =cut
 

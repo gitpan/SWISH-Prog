@@ -117,7 +117,7 @@ my %allopts = (
     'help'                => 'print usage',
     'config=s'            => 'config file',
     'verbose:i'           => 'be verbose',
-    'debug|Debug'         => 'debugging',
+    'debug|Debug:i'       => 'debugging',
     'Warnings=i'          => 'print libxml2 warnings',
     'aggregator|Source=s' => 'aggregator type',
     'Format=s'            => 'indexer type (native, ks, lucy, xapian, dbi)',
@@ -221,6 +221,10 @@ if ( $Opt->{input} ) {
     if ( $Opt->{Expected} ) {
         $prog->aggregator->progress( progress_bar( $Opt->{Expected} ) );
     }
+
+    # this seems to DWIM and quiets a warning from SWISH::3
+    $prog->aggregator->set_parser_from_type(1);
+
     $prog->indexer->invindex->path->mkpath( $Opt->{debug} );
     $prog->indexer->invindex->path->file('swish_last_start')->touch();
     my $start    = time();
@@ -239,7 +243,7 @@ elsif ( $Opt->{query} ) {
     my $searcher   = $sclass->new( invindex => $invindex->path . '', );
     my $start_time = Time::HiRes::time();
     my $results    = $searcher->search(
-        to_utf8($Opt->{query}),
+        to_utf8( $Opt->{query} ),
         {   start       => $Opt->{begin},
             max         => $Opt->{max},
             limit       => parse_limits( $Opt->{Limit} ),
@@ -252,7 +256,7 @@ elsif ( $Opt->{query} ) {
     if ( $Opt->{Headers} ) {
         printf( "# swish3 version %s\n", $VERSION );
         printf( "# Format: %s\n",        $format );
-        printf( "# Query: %s\n",         to_utf8($Opt->{query}) );
+        printf( "# Query: %s\n",         to_utf8( $Opt->{query} ) );
         printf( "# Hits: %d\n",          $results->hits );
         printf( "# Search time: %.4f\n", $search_time );
     }

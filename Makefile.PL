@@ -22,6 +22,7 @@ requires 'Test::More'         => 0;
 requires 'File::Slurp'        => 0;        # Search::Tools also requires this
 requires 'XML::Simple'        => 0;
 requires 'Search::Query'      => 0.17;
+requires 'SWISH::3'           => 1.000001;
 
 # recommended Aggregator support
 

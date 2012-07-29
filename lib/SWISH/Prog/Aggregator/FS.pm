@@ -4,12 +4,12 @@ use warnings;
 use base qw( SWISH::Prog::Aggregator );
 
 use Carp;
-use File::Slurp;
 use File::Find;
 use File::Rules;
 use Data::Dump qw( dump );
+use SWISH::3;
 
-our $VERSION = '0.59';
+our $VERSION = '0.60';
 
 # we rely on file extensions to determine content type
 # and thus parser type. If a file has no extension,
@@ -55,9 +55,6 @@ sub init {
     my $self = shift;
     $self->SUPER::init(@_);
 
-    # read from $self->config and set some flags
-    # TODO FileRules, FileMatch
-
     # create .ext regex to match in file_ok()
     if ( $self->config->IndexOnly ) {
         my $re = join( '|',
@@ -66,13 +63,6 @@ sub init {
     }
     else {
         $self->{_ext_re} = $SWISH::Prog::Utils::ExtRE;
-    }
-
-    # if running with SWISH::3,
-    # instantiate for the slurp advantage
-    eval "use SWISH::3 0.09";
-    if ( !$@ ) {
-        $self->{_swish3} = SWISH::3->new;
     }
 
 }
@@ -102,7 +92,6 @@ sub file_ok {
     # treat no extension like plain text
     $ext = $DEFAULT_EXTENSION unless length $ext;
 
-    # TODO configure this for HiddenFiles
     return 0 if $file =~ m/^\./;
 
     #carp "parsed file: $file\npath: $path\next: $ext";
@@ -122,7 +111,7 @@ sub file_ok {
     $self->debug and warn "  $full_path -> ok\n";
     if ( $self->verbose & 4 ) {
         local $| = 1;    # don't buffer
-        print "crawling $full_path\n";
+        print "crawling file $full_path\n";
     }
 
     return $ext;
@@ -132,8 +121,6 @@ sub file_ok {
 
 Called by find() for all directories. You can control
 the recursion into I<directory> via the config() params
-
- TODO
  
 =cut
 
@@ -155,10 +142,10 @@ sub dir_ok {
     $self->debug and warn "  $dir -> ok\n";
     if ( $self->verbose & 2 ) {
         local $| = 1;                       # don't buffer
-        print "crawling $dir\n";
+        print "crawling dir $dir\n";
     }
 
-    1;                                      # TODO esp RecursionDepth
+    1;
 }
 
 sub _apply_file_rules {
@@ -195,25 +182,14 @@ sub get_doc {
     my ( $stat, $ext ) = @_;
     my $buf;
 
-    # the SWISH::3->slurp is about 50% faster
-    # but obviously only available if SWISH::3 is loaded.
-    # It also handles .gz files transparently based on .gz
-    # extension, so must remove the extension to avoid
-    # double-unzip via SWISH::Filter.
-
     # NOTE we always read in binary (raw) mode in case
     # the file is compressed, binary, etc.
-    if ( $self->{_swish3} ) {
+    eval {
 
-        #warn "$url using swish3->slurp\n";
-        eval {
-            $buf = $self->{_swish3}->slurp( $url, 1 );
-            $url =~ s/\.gz$//;    # post-slurp, in case it failed.
-        };
-    }
-    else {
-        eval { $buf = read_file( $url, binmode => ':raw' ) };
-    }
+        # the 2nd param runs in raw mode (no NULL substitution)
+        $buf = SWISH::3->slurp( $url, 1 );
+        $url =~ s/\.gz$//;    # post-slurp, in case it failed.
+    };
 
     if ($@) {
         carp "unable to read $url - skipping";

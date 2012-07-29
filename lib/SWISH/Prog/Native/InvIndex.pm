@@ -5,7 +5,7 @@ use Carp;
 use base qw( SWISH::Prog::InvIndex );
 __PACKAGE__->mk_accessors(qw( file ));
 
-our $VERSION = '0.59';
+our $VERSION = '0.60';
 
 =head1 NAME
 

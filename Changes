@@ -259,3 +259,9 @@ Revision history for Perl extension Prog.
 0.59    26 July 2012
         * add FollowXInclude support for Swish3
 
+0.60    28 July 2012
+        * add *_property methods to InvIndex::Meta
+        * SWISH::3 now required dependency
+        * added use_quotes and quote_char features to Aggregator::DBI, inspired by patch from
+          Miko O'Sullivan.
+

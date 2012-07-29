@@ -9,7 +9,7 @@ use SWISH::Prog::Doc;
 use Scalar::Util qw( blessed );
 use Data::Dump qw( dump );
 
-our $VERSION = '0.59';
+our $VERSION = '0.60';
 
 __PACKAGE__->mk_accessors(
     qw(
@@ -201,11 +201,23 @@ sub swish_filter {
         croak "SWISH::Prog::Doc-derived object required";
     }
 
+    if ( $self->debug ) {
+        warn "checking filter for " . $doc->url;
+    }
+
     $doc->parser( $SWISH::Prog::Utils::ParserTypes{ $doc->type }
             || $SWISH::Prog::Utils::ParserTypes{default} )
         if $self->set_parser_from_type;
 
     if ( $self->{swish_filter_obj}->can_filter( $doc->type ) ) {
+
+        if ( $self->debug ) {
+            warn sprintf
+                "debug=%d can_filter true for %s with parser %s for type %s",
+                $self->debug, $doc->url,
+                $doc->parser, $doc->type;
+        }
+
         my $content = $doc->content;
         my $url     = $doc->url;
         my $type    = $doc->type;
@@ -225,14 +237,17 @@ sub swish_filter {
 
         if ( $self->debug > 1 ) {
             warn "$url [$type] was filtered\n";
-            warn "content changed\n" if $doc->content ne ${ $f->fetch_doc };
+            if ( $doc->content ne ${ $f->fetch_doc } ) {
+                warn sprintf "content changed:'%s'\n", ${ $f->fetch_doc };
+            }
         }
 
         $doc->content( ${ $f->fetch_doc } );
 
         # leave type and parser as-is
-        # since we want to store original mime in indexer
-        # TODO what about parser ?
+        # since we want to store original mime in indexer.
+        # TODO test this.
+        # what about parser?
         # since type will have changed ( $f->content_type ) from original
         # the parser type might also have changed?
 
