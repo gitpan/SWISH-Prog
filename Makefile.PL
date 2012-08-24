@@ -60,6 +60,7 @@ WriteMakefile(
                 t/index.swish
                 t/spider.index
                 t/mail.index
+                SWISH-Prog-*
                 )
         )
     }

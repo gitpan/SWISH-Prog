@@ -5,7 +5,7 @@ use base qw( SWISH::Prog::Class );
 __PACKAGE__->mk_accessors(qw( cache ));
 use Carp;
 
-our $VERSION = '0.60';
+our $VERSION = '0.61';
 
 =pod
 

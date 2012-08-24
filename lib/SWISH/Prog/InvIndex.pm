@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use base qw( SWISH::Prog::Class );
 use Carp;
-use Path::Class ();   # do not import file() and dir()
+use Path::Class ();    # do not import file() and dir()
 use Scalar::Util qw( blessed );
 use SWISH::Prog::InvIndex::Meta;
 use overload(
@@ -13,7 +13,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.60';
+our $VERSION = '0.61';
 
 __PACKAGE__->mk_accessors(qw( path clobber ));
 

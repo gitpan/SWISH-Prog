@@ -16,7 +16,7 @@ use Search::Tools::UTF8;
 binmode STDERR, ':utf8';
 binmode STDOUT, ':utf8';
 
-my $VERSION = '3.0.12';
+my $VERSION = '3.0.13';
 
 my $USAGE = qq{$0
  usage:
@@ -226,7 +226,6 @@ if ( $Opt->{input} ) {
     $prog->aggregator->set_parser_from_type(1);
 
     $prog->indexer->invindex->path->mkpath( $Opt->{debug} );
-    $prog->indexer->invindex->path->file('swish_last_start')->touch();
     my $start    = time();
     my $num_docs = $prog->index(@ARGV);
     my $end      = time();
@@ -240,17 +239,30 @@ elsif ( $Opt->{query} ) {
     my $sclass   = "SWISH::Prog::${format}::Searcher";
     eval "require $sclass";
     croak $@ if $@;
-    my $searcher   = $sclass->new( invindex => $invindex->path . '', );
-    my $start_time = Time::HiRes::time();
-    my $results    = $searcher->search(
-        to_utf8( $Opt->{query} ),
-        {   start       => $Opt->{begin},
-            max         => $Opt->{max},
-            limit       => parse_limits( $Opt->{Limit} ),
-            rank_scheme => $Opt->{RankScheme},
-            order       => $Opt->{sort_order},
-        }
+    my $searcher = $sclass->new(
+        invindex => $invindex->path . '',
+        debug    => $Opt->{debug},
     );
+    my $start_time = Time::HiRes::time();
+    my $results;
+    eval {
+        $results = $searcher->search(
+            to_utf8( $Opt->{query} ),
+            {   start       => $Opt->{begin},
+                max         => $Opt->{max},
+                limit       => parse_limits( $Opt->{Limit} ),
+                rank_scheme => $Opt->{RankScheme},
+                order       => $Opt->{sort_order},
+            }
+        );
+    };
+
+    if ($@) {
+        my $errmsg = "$@";
+        $errmsg =~ s/ at \/[\w\/\.]+ line \d+\.?.*$//s;
+        die "Error: $errmsg\n";
+    }
+
     my $search_time = Time::HiRes::time() - $start_time;
 
     if ( $Opt->{Headers} ) {

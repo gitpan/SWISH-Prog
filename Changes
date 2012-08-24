@@ -265,3 +265,10 @@ Revision history for Perl extension Prog.
         * added use_quotes and quote_char features to Aggregator::DBI, inspired by patch from
           Miko O'Sullivan.
 
+0.61    23 Aug 2012
+        * swish3 now catches exceptions and re-throws errors
+        * swish3 now passes --debug flag into Searcher->new
+        * base Indexer now performs check on existing indexes to verify that you aren't trying
+          to run one format's Indexer against a different format's index.
+        * swish_last_start file now created by base Indexer class, not swish3 cli.
+

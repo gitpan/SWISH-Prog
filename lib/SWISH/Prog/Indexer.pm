@@ -7,7 +7,7 @@ use Carp;
 use Data::Dump qw( dump );
 use SWISH::Prog::Config;
 
-our $VERSION = '0.60';
+our $VERSION = '0.61';
 
 __PACKAGE__->mk_accessors(
     qw( invindex config count clobber flush started test_mode ));
@@ -99,7 +99,10 @@ sub init {
 
 =head2 start
 
-Opens the invindex() objet and sets the started() time to time().
+Opens the invindex() object and sets the started() time to time().
+
+Subclasses should always call SUPER::start() if they override
+this method since it provides sanity checking on the InvIndex.
 
 =cut
 
@@ -108,15 +111,31 @@ sub start {
     if ( !defined $self->invindex ) {
         croak "Missing invindex object";
     }
-    if (   !blessed( $self->invindex )
-        or !$self->invindex->can('open') )
+    my $invindex = $self->invindex;
+    if (   !blessed($invindex)
+        or !$invindex->can('open') )
     {
-        croak
-            "Invalid invindex: either not blessed object or does not implement 'open' method";
+        croak "Invalid invindex $invindex: "
+            . "either not blessed object or does not implement 'open' method";
     }
 
+    # sanity check. if this is an existing index
+    # does our Format match what already exists?
+    my $meta;
+    eval { $meta = $invindex->meta; };
+    if ( !$@ ) {
+        my $format = $meta->Index->{Format};
+        if ( ref($self) ne 'SWISH::Prog::' . $format . '::Indexer' ) {
+            croak "Fatal error: found existing invindex '$invindex' "
+                . "with format $format.\n"
+                . "You tried to open it with "
+                . ref($self);
+        }
+
+    }
     $self->invindex->open;
     $self->{started} = time();
+    $self->invindex->path->file('swish_last_start')->touch();
 }
 
 =head2 process( I<doc> )

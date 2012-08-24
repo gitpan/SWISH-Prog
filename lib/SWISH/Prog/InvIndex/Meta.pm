@@ -6,7 +6,7 @@ use Carp;
 use XML::Simple;
 use SWISH::3 qw( :constants );
 
-our $VERSION = '0.60';
+our $VERSION = '0.61';
 
 __PACKAGE__->mk_accessors(qw( invindex ));
 __PACKAGE__->mk_ro_accessors(qw( file ));
@@ -14,10 +14,14 @@ __PACKAGE__->mk_ro_accessors(qw( file ));
 # index metadata. read/write libswish3 file xml format.
 #
 
+sub swish_header_file {
+    return 'swish.xml';
+}
+
 sub init {
     my $self = shift;
     $self->SUPER::init(@_);
-    $self->{file} ||= $self->invindex->path->file('swish.xml');
+    $self->{file} ||= $self->invindex->path->file( $self->swish_header_file );
     if ( !-s $self->{file} ) {
         confess("No such file: $self->{file}");
     }
@@ -98,13 +102,18 @@ at this time.
 
 =head1 METHODS
 
+=head2 swish_header_file
+
+Class or object method. Returns the basename of the header file.
+Default is C<swish.xml>.
+
 =head2 init
 
-Read and initialize the swish.xml header file.
+Read and initialize the swish_header_file().
 
 =head2 file
 
-The full path to the C<swish.xml> file. This is a read-only accessor.
+The full path to the swish_header_file() file. This is a read-only accessor.
 
 =head2 invindex
 
