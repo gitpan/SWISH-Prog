@@ -13,7 +13,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.61';
+our $VERSION = '0.62';
 
 __PACKAGE__->mk_accessors(qw( path clobber ));
 
@@ -82,6 +82,12 @@ sub meta {
     return SWISH::Prog::InvIndex::Meta->new( invindex => $self );
 }
 
+sub meta_file {
+    my $self = shift;
+    return $self->path->file(
+        SWISH::Prog::InvIndex::Meta->swish_header_file );
+}
+
 1;
 
 __END__
@@ -118,6 +124,10 @@ index.
 
 Returns a SWISH::Prog::InvIndex::Meta object with which you can query 
 information about the index.
+
+=head2 meta_file
+
+Returns Path::Class::File object pointing at the swish_header_file.
 
 =head2 open
 

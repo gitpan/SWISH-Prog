@@ -9,7 +9,7 @@ use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 use File::Copy ();
 
-our $VERSION = '0.61';
+our $VERSION = '0.62';
 
 my $invindex_class = 'SWISH::Prog::Native::InvIndex';
 
@@ -232,8 +232,7 @@ sub finish {
     $self->fh(undef);
 
     # write header
-    $self->config->write3(
-        $self->invindex->path->file('swish.xml')->stringify );
+    $self->config->write3( $self->invindex->meta_file->stringify );
 
 }
 
@@ -307,10 +306,10 @@ sub merge {
 
     close(SWISH) or croak "can't close merge(): $cmd: $! ($?)\n";
 
-    # assume that the swish.xml header file is the same for
+    # assume that the header file is the same for
     # all the merged files, and preserve this one.
-    my $header = $current_path->file('swish.xml')->stringify;
-    File::Copy::copy( $header, $tmpindex->path->file('swish.xml')->stringify )
+    my $header = $self->invindex->meta_file->stringify;
+    File::Copy::copy( $header, $tmpindex->meta_file->stringify )
         or croak "copy $header -> $tmpindex failed: $!";
 
     # archive the existing just in case
@@ -344,7 +343,7 @@ sub process {
     my $doc  = $self->SUPER::process(@_);
     $doc->version(2);
 
-    if ($self->debug) {
+    if ( $self->debug ) {
         warn $doc;
     }
 

@@ -7,7 +7,7 @@ use Carp;
 use Data::Dump qw( dump );
 use SWISH::Prog::Config;
 
-our $VERSION = '0.61';
+our $VERSION = '0.62';
 
 __PACKAGE__->mk_accessors(
     qw( invindex config count clobber flush started test_mode ));
@@ -125,7 +125,7 @@ sub start {
     eval { $meta = $invindex->meta; };
     if ( !$@ ) {
         my $format = $meta->Index->{Format};
-        if ( ref($self) ne 'SWISH::Prog::' . $format . '::Indexer' ) {
+        if ( !$self->isa( 'SWISH::Prog::' . $format . '::Indexer' ) ) {
             croak "Fatal error: found existing invindex '$invindex' "
                 . "with format $format.\n"
                 . "You tried to open it with "
