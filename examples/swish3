@@ -16,7 +16,7 @@ use Search::Tools::UTF8;
 binmode STDERR, ':utf8';
 binmode STDOUT, ':utf8';
 
-my $VERSION = '3.0.13';
+my $VERSION = '3.0.14';
 
 my $USAGE = qq{$0
  usage:
@@ -30,6 +30,7 @@ my $USAGE = qq{$0
     swish3 -N path/to/compare/file or date
     swish3 -V
     swish3 -h
+    swish3 -D n
 
  options: defaults are in brackets
  # commented options are not yet supported
@@ -37,6 +38,7 @@ my $USAGE = qq{$0
  indexing options:
     -c : configuration file
     -D : Debug mode
+   --doc_filter : doc_filter
     -E : next param is total expected files (generates progress bar)
     -f : invindex dir to create or search from [index.swish3]
     -F : next param is invindex format (ks, lucy, xapian, native, or dbi) [native]
@@ -55,6 +57,7 @@ my $USAGE = qq{$0
          #"prog"  - use the program API
         The default value is: "fs"
     #-T : Trace options ('-T help' for info)
+    -v : indexing verbosity level (0 to 3) [-v 1]
     -W : next param is ParserWarnLevel [-W 2]
 
  search options:
@@ -88,56 +91,58 @@ SWISH::Prog::VERSION : $SWISH::Prog::VERSION
 };
 
 my $Opt = {
+    begin              => 0,
+    config             => '',
+    Debug              => 0,
+    doc_filter         => undef,
+    Expected           => undef,
+    extended_output    => undef,
+    folder             => undef,
+    Format             => 'native',
+    Headers            => 1,
     help               => 0,
+    input              => 0,
+    Limit              => [],
+    links              => 0,
+    lucy_highlightable => 0,
+    max                => undef,
+    Merge              => undef,
+    newer_than         => undef,
+    query              => '',
+    sort_order         => '',
+    Source             => 'fs',
+    test_mode          => $ENV{SWISH_TEST} || 0,
     verbose            => undef,
     Version            => 0,
-    Debug              => 0,
-    config             => '',
     Warnings           => 2,
-    Source             => 'fs',
-    Format             => 'native',
-    query              => '',
-    input              => 0,
-    folder             => undef,
-    begin              => 0,
-    max                => undef,
-    test_mode          => $ENV{SWISH_TEST} || 0,
-    extended_output    => undef,
-    Limit              => [],
-    newer_than         => undef,
-    links              => 0,
-    Merge              => undef,
-    Headers            => 1,
-    sort_order         => '',
-    Expected           => undef,
-    lucy_highlightable => 0,
 };
 
 my %allopts = (
-    'help'                => 'print usage',
-    'config=s'            => 'config file',
-    'verbose:i'           => 'be verbose',
-    'debug|Debug:i'       => 'debugging',
-    'Warnings=i'          => 'print libxml2 warnings',
     'aggregator|Source=s' => 'aggregator type',
-    'Format=s'            => 'indexer type (native, ks, lucy, xapian, dbi)',
-    'query|words=s'       => 'search query',
-    'input'               => 'indexing mode',
-    'folder=s'            => 'invindex dir',
     'begin=i'             => 'begin results [0]',
-    'max=i'               => 'max results [all]',
-    'Version'             => 'print Version',
-    'test_mode'           => 'set with SWISH_TEST env var',
+    'config=s'            => 'config file',
+    'debug|Debug:i'       => 'debugging',
+    'doc_filter=s'        => 'document filter sub ref',
+    'Expected=i'          => 'expected total docs (generates progress bar)',
     'extended_output|x=s' => 'extended output format string',
-    'Limit=s'             => 'Limit to range of values',
-    'newer_than|N:s'      => 'index only documents newer than',
-    'links'               => 'follow symbolic links when indexing',
-    'Merge'               => 'merge 2 or more indexes',
+    'folder=s'            => 'invindex dir',
+    'Format=s'            => 'indexer type (native, ks, lucy, xapian, dbi)',
     'Headers=i'           => 'Header output verbosity',
+    'help'                => 'print usage',
+    'input'               => 'indexing mode',
+    'Limit=s'             => 'Limit to range of values',
+    'links'               => 'follow symbolic links when indexing',
+    'lucy_highlightable'  => 'set highlightable_fields for Lucy indexer',
+    'max=i'               => 'max results [all]',
+    'Merge'               => 'merge 2 or more indexes',
+    'newer_than|N:s'      => 'index only documents newer than',
+    'query|words=s'       => 'search query',
     'RankScheme=i'        => 'ranking algorithm (native only)',
     'sort_order=s'        => 'result sort order',
-    'Expected=i'          => 'expected total docs (generates progress bar)',
-    'lucy_highlightable'  => 'set highlightable_fields for Lucy indexer',
+    'test_mode'           => 'set with SWISH_TEST env var',
+    'verbose:i'           => 'be verbose',
+    'Version'             => 'print Version',
+    'Warnings=i'          => 'print libxml2 warnings',
 );
 
 my %native_only_opts = ( 'RankScheme' => 1, );
@@ -182,9 +187,12 @@ if ( !exists $ENV{SWISH_WARNINGS} ) {
 
 my %prog_can = ( highlightable_fields => $Opt->{lucy_highlightable}, );
 
-for ( keys %$Opt ) {
-    if ( SWISH::Prog->can($_) ) {
-        $prog_can{$_} = $Opt->{$_};
+for my $opt ( keys %$Opt ) {
+    if ( SWISH::Prog->can($opt) ) {
+        $prog_can{$opt} = $Opt->{$opt};
+    }
+    elsif ( $opt eq 'doc_filter' ) {
+        $prog_can{filter} = $Opt->{$opt};
     }
 }
 if ( $Opt->{input} ) {
@@ -417,15 +425,17 @@ swish3 - SWISH::Prog-based Swish3 implementation
 
 =head1 SYNOPSIS
 
-    swish3 [-E N] [-i dir file ... ] [-S aggregator] [-c file] [-f invindex] [-l] [-v (num)]
+    swish3 [-E N] [-i dir file ... ] [--doc_filter filter] [-S aggregator] [-c file] [-f invindex] [-l] \
+           [-v (num)]
     swish3 -w word1 word2 ... [-f file1 file2 ...] \
           [-P phrase_delimiter] [-p prop1 ...] [-s sortprop1 [asc|desc] ...] \
-          [-m num] [-t str] [-d delim] [-H (num)] [-x output_format] \
+          [-m num] [-t str] [-H (num)] [-x output_format] \
           [-R rank_scheme] [-L prop low high]
     swish3 -k (char|*) [-f invindex1 invindex2 ...]
     swish3 -M invindex1 invindex2 ... outputfile
     swish3 -N path/to/compare/file or date
     swish3 -V
+    swish3 -D n
 
  NOTE THAT SOME OPTIONS ARE NOT YET SUPPORTED.
  Type:

@@ -10,7 +10,7 @@ use SWISH::Prog::Config;
 use SWISH::Prog::InvIndex;
 use SWISH::Prog::ReplaceRules;
 
-our $VERSION = '0.62';
+our $VERSION = '0.63';
 
 __PACKAGE__->mk_accessors(qw( aggregator test_mode ));
 
@@ -40,17 +40,90 @@ SWISH::Prog - information retrieval application framework
 
 =head1 DESCRIPTION
 
-B<NOTE: As of version 0.20 this API has been completely redesigned
-from previous versions.>
+SWISH::Prog is a full-text search framework based on Swish-e
+(L<http://swish-e.org/>).
 
-SWISH::Prog is a full-text search framework based on Swish-e.
-SWISH::Prog handles document and data aggregation and indexing.
+SWISH::Prog tries to fill a niche similar to L<Data::SearchEngine>
+or L<DBI>: providing a uniform and flexible interface to several
+different search engine tools and libraries.
+
+SWISH::Prog does B<not> try to replace the use of the underlying
+search engine tools, but instead tries to fill in some usability
+gaps and, like the DBI, make it relatively easy to switch
+between backend tools without needing to re-write an entire
+codebase.
+
+SWISH::Prog implements all five basic components of a search
+application:
+
+=over
+
+=item Aggregator
+
+Gather a document collection. A collection might be a group
+of HTML pages, or XML documents, or rows in a database. A collection
+might originate from the web, a filesystem, a database, an email
+inbox, or anywhere bytes are stored. An Aggregator gathers
+those documents in a uniform way.
+
+SWISH::Prog provides a variety of Aggregators, for filesystems,
+email trees, spidering the web, pulling from databases, to name
+a few. See L<SWISH::Prog::Aggregator> and its subclasses.
+
+=item Normalizer
+
+Documents come in a variety of formats (MIME types). A Normalizer
+turns those disparate types into something text-based
+and parseable. SWISH::Prog uses L<SWISH::Filter> to normalize
+documents.
+
+=item Parser/Analyzer
+
+Documents are tokenized into "words" with attention to position,
+context, length, encoding, and linguistic quality (stemming,
+case, stopwords, etc.).
+
+With the exception of the Native classes, 
+SWISH::Prog uses L<SWISH::3> to parse HTML and XML documents (the
+most common normalized format for SWISH::Filter), and
+then delegates further analysis (tokenization, etc) to
+backend tools or libraries.
+
+=item Indexer
+
+Each L<SWISH::Prog::Indexer> subclass fronts an information retrieval (IR)
+tool or library that implements its own proprietary, highly
+optimized inverted index storage system that preserves the
+intelligence of the Parser/Analyzer.
+
+For example, the L<SWISH::Prog::Lucy::Indexer> is a wrapper around
+L<Lucy::Index::Indexer>. L<SWISH::Prog::Native::Indexer> is a wrapper
+around the C<swish-e> tool.
+
+=item Searcher
+
+Like the Indexer, each SWISH::Prog::Searcher subclass delegates
+the searching of the inverted index to the backend IR tool
+or library.
+
+For example, the L<SWISH::Prog::Lucy::Searcher> is a wrapper
+around L<Lucy::Search::PolySearcher>. 
+L<SWISH::Prog::Native::Searcher> is a wrapper
+around the L<SWISH::API::More> module.
+
+=back
+
+=head1 BACKGROUND
 
 The name "SWISH::Prog" comes from the Swish-e -S prog feature.
 "prog" is short for "program". SWISH::Prog makes it easy to
 write indexing and search programs.
 
-B<The API is a work in progress and subject to change.>
+SWISH::Prog started as a way of making the C<swish-e> binary
+tool easier to integrate into Perl applications, and has since
+been expanded as a full implementation of Swish3, with alternate
+backend libraries (KinoSearch, Xapian, Apache Lucy, etc)
+filling the Indexer and Searcher roles.
 
 =head1 METHODS
 
@@ -170,6 +243,11 @@ sub init {
     # set these now so we can call $self->config
     $self->{aggregator} = $aggregator;
     $self->{indexer}    = $indexer;
+
+    # allow filter to be a file containing a sub ref
+    if ( $filter and -f $filter ) {
+        $filter = do $filter;
+    }
 
     if ( $self->config and $self->config->ReplaceRules ) {
 
@@ -350,7 +428,7 @@ L<http://search.cpan.org/dist/SWISH-Prog/>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2008-2009 by Peter Karman
+Copyright 2008-2009, 2012 by Peter Karman
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

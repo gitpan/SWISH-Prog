@@ -275,3 +275,8 @@ Revision history for Perl extension Prog.
 0.62    3 Sept 2012
         * support subclassing of Indexer in start() sanity check introduced in 0.61
         * add InvIndex->meta_file method and avoid referring to swish.xml directly
+
+0.63    11 Sept 2012
+        * add TagAlias support to Config. TagAlias is a Swish3 feature.
+        * improve SWISH::Prog documentation
+        * add --doc_filter to swish3, to allow for set_filter to work from an external Perl file.

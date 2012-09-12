@@ -29,4 +29,7 @@
  <Parsers>
   <XML>application/pdf</XML>
  </Parsers>
+ <TagAlias>
+  <myalias>foo.bar.baz</myalias>
+ </TagAlias>
 </swish>

@@ -16,7 +16,7 @@ use overload(
     fallback => 1,
 );
 
-our $VERSION = '0.62';
+our $VERSION = '0.63';
 
 my $XML = Search::Tools::XML->new;
 
@@ -106,6 +106,7 @@ my @Opts = qw(
     SwishProgParameters
     SwishSearchDefaultRule
     SwishSearchOperators
+    TagAlias
     TmpDir
     TranslateCharacters
     TruncateDocSize
@@ -530,6 +531,7 @@ sub ver2_to_ver3 {
         PropertyNamesSortKeyLength
         ReplaceRules
         StoreDescription
+        TagAlias
         Words
     );
 
@@ -591,6 +593,7 @@ EOF
         Index         => { Format => ['Native'], },
         MIME          => {},
         Parsers       => {},
+        TagAlias      => {},
     );
 
     #warn dump $config;
@@ -612,6 +615,14 @@ KEY: for my $k ( sort keys %$config ) {
                 my ( $bias, $names ) = ( $pair =~ m/^([\-\d]+) +(.+)$/ );
                 for my $name ( split( m/\ +/, $names ) ) {
                     $conf3{'MetaNames'}->{$name}->{bias} = $bias;
+                }
+            }
+        }
+        elsif ( $k eq 'TagAlias' ) {
+            for my $pair (@args) {
+                my ( $name, $aliases ) = ( $pair =~ m/^(\S+) +(.+)$/ );
+                for my $alias ( split( m/\ +/, $aliases ) ) {
+                    $conf3{'TagAlias'}->{$alias} = $name;
                 }
             }
         }
@@ -768,11 +779,12 @@ KEY: for my $k ( sort keys %$config ) {
     # now convert %conf3 to XML
 
     # deal with these special cases separately
-    my $metas   = delete $conf3{'MetaNames'};
-    my $props   = delete $conf3{'PropertyNames'};
-    my $index   = delete $conf3{'Index'};
-    my $mimes   = delete $conf3{'MIME'};
-    my $parsers = delete $conf3{'Parsers'};
+    my $metas     = delete $conf3{'MetaNames'};
+    my $props     = delete $conf3{'PropertyNames'};
+    my $index     = delete $conf3{'Index'};
+    my $mimes     = delete $conf3{'MIME'};
+    my $parsers   = delete $conf3{'Parsers'};
+    my $tag_alias = delete $conf3{'TagAlias'};
 
     for my $k ( sort keys %conf3 ) {
         my $key = to_utf8($k);
@@ -816,7 +828,8 @@ KEY: for my $k ( sort keys %$config ) {
         }
     }
     if ( $conf3{FuzzyIndexingMode} ) {
-        $debug and warn "got FuzzyIndexingMode: $conf3{FuzzyIndexingMode}->[0]";
+        $debug
+            and warn "got FuzzyIndexingMode: $conf3{FuzzyIndexingMode}->[0]";
         $xml .= sprintf(
             "  <%s>%s</%s>\n",
             "Stemmer",
@@ -849,6 +862,17 @@ KEY: for my $k ( sort keys %$config ) {
             }
         }
         $xml .= " </Parsers>\n";
+    }
+
+    if ( keys %$tag_alias ) {
+        $xml .= " <TagAlias>\n";
+        for my $alias ( sort keys %$tag_alias ) {
+            my $name = $tag_alias->{$alias};
+            $xml .= sprintf( "  <%s>%s</%s>\n",
+                $XML->tag_safe($alias),
+                $XML->escape($name), $XML->tag_safe($alias) );
+        }
+        $xml .= " </TagAlias>\n";
     }
 
     $xml .= "</swish>\n";
