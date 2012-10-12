@@ -10,9 +10,9 @@ use SWISH::Prog::Config;
 use SWISH::Prog::InvIndex;
 use SWISH::Prog::ReplaceRules;
 
-our $VERSION = '0.63';
+our $VERSION = '0.64';
 
-__PACKAGE__->mk_accessors(qw( aggregator test_mode ));
+__PACKAGE__->mk_accessors(qw( aggregator aggregator_opts test_mode ));
 
 # each $swishProg hasa aggregator, which hasa indexer and hasa invindex
 
@@ -217,6 +217,7 @@ sub init {
     }
 
     $aggregator = $self->{aggregator} || 'fs';
+    my $aggregator_opts = $self->{aggregator_opts} || {};
 
     if ( !blessed($aggregator) ) {
 
@@ -234,6 +235,7 @@ sub init {
             debug     => $self->debug,
             verbose   => $self->verbose,
             test_mode => $self->test_mode,
+            %$aggregator_opts,
         );
     }
     elsif ( !$aggregator->isa('SWISH::Prog::Aggregator') ) {
@@ -282,9 +284,38 @@ sub init {
     return $self;
 }
 
+=head2 filter( I<CODE ref> )
+
+Set in new(). See L<SWISH::Prog::Doc>.
+
+Example:
+
+ my $prog = SWISH::Prog->new(
+     filter => {
+        my $doc = shift;
+    
+        # alter url
+        my $url = $doc->url;
+        $url =~ s/my.foo.com/my.bar.org/;
+        $doc->url( $url );
+    
+        # alter content
+        my $buf = $doc->content;
+        $buf =~ s/foo/bar/gi;
+        $doc->content( $buf );
+    }
+ );
+
+The I<filter> value can also be the name of a file
+that evals to a CODE ref.
+ 
 =head2 aggregator( I<$swish_prog_aggregator> )
 
 Get the SWISH::Prog::Aggregator object. You should set this in new().
+
+=head2 aggregator_opts
+
+Get the hashref of options passed internally to the B<aggregator> constructor.
 
 =head2 run( I<collection> )
 

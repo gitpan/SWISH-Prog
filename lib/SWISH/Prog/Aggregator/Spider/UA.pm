@@ -1,7 +1,7 @@
 package SWISH::Prog::Aggregator::Spider::UA;
 use strict;
 use warnings;
-use base qw( WWW::Mechanize );
+use base qw( WWW::Mechanize::GZip );
 use Carp;
 use Data::Dump qw( dump );
 use Search::Tools::UTF8;

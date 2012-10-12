@@ -16,7 +16,7 @@ use Search::Tools::UTF8;
 binmode STDERR, ':utf8';
 binmode STDOUT, ':utf8';
 
-my $VERSION = '3.0.14';
+my $VERSION = '3.0.15';
 
 my $USAGE = qq{$0
  usage:
@@ -36,6 +36,7 @@ my $USAGE = qq{$0
  # commented options are not yet supported
 
  indexing options:
+   --aggregator_opts : name=value
     -c : configuration file
     -D : Debug mode
    --doc_filter : doc_filter
@@ -91,6 +92,7 @@ SWISH::Prog::VERSION : $SWISH::Prog::VERSION
 };
 
 my $Opt = {
+    aggregator_opts    => {},
     begin              => 0,
     config             => '',
     Debug              => 0,
@@ -119,6 +121,7 @@ my $Opt = {
 
 my %allopts = (
     'aggregator|Source=s' => 'aggregator type',
+    'aggregator_opts=s'   => 'aggregator options',
     'begin=i'             => 'begin results [0]',
     'config=s'            => 'config file',
     'debug|Debug:i'       => 'debugging',

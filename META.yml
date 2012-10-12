@@ -27,7 +27,8 @@ recommends:
   SWISH::API::Object: 0.13
   Term::ProgressBar: 0
   URI: 0
-  WWW::Mechanize: 0
+  WWW::Mechanize::GZip: 0
+  XML::Feed: 0
   YAML::Syck: 0.72
 requires:
   Config::General: 2.31
@@ -40,11 +41,11 @@ requires:
   Path::Class: 0
   Rose::DateTime: 0
   Rose::ObjectX::CAF: 0
-  SWISH::3: 1.000001
+  SWISH::3: 1.000005
   SWISH::Filter: 0.15
   Scalar::Util: 0
   Search::Query: 0.17
-  Search::Tools: 0.43
+  Search::Tools: 0.82
   Test::More: 0
   Time::HiRes: 0
   XML::Simple: 0
@@ -54,4 +55,4 @@ resources:
   homepage: http://dev.swish-e.org/wiki/perl
   license: http://dev.perl.org/licenses/
   repository: http://svn.swish-e.org/perl/SWISH-Prog/
-version: 0.63
+version: 0.64

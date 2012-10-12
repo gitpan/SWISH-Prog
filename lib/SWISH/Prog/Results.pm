@@ -4,7 +4,7 @@ use warnings;
 use base qw( SWISH::Prog::Class );
 use Carp;
 
-our $VERSION = '0.63';
+our $VERSION = '0.64';
 
 __PACKAGE__->mk_accessors(
     qw(

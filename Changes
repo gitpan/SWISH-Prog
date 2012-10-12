@@ -280,3 +280,9 @@ Revision history for Perl extension Prog.
         * add TagAlias support to Config. TagAlias is a Swish3 feature.
         * improve SWISH::Prog documentation
         * add --doc_filter to swish3, to allow for set_filter to work from an external Perl file.
+
+0.64    12 Oct 2012
+        * add --aggregator_opts to swish3 and SWISH::Prog
+        * add looks_like_feed() to Spider, and add dependency on XML::Feed
+        * switch Spider::UA parent class to WWW::Mechanize::GZip
+

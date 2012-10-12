@@ -9,13 +9,15 @@ use SWISH::Prog::Utils;
 use SWISH::Prog::Queue;
 use SWISH::Prog::Cache;
 use SWISH::Prog::Aggregator::Spider::UA;
+use Search::Tools::UTF8;
+use XML::Feed;
 
 __PACKAGE__->mk_accessors(
     qw( use_md5 uri_cache md5_cache queue ua max_depth delay timeout ));
 
 #use LWP::Debug qw(+);
 
-our $VERSION = '0.63';
+our $VERSION = '0.64';
 
 # TODO make these configurable
 my %parser_types = %SWISH::Prog::Utils::ParserTypes;
@@ -69,7 +71,7 @@ been fetched already.
 
 =item md5_cache 
 
-If use_md5() is true, this SWISH::Prog::cache-derived object tracks
+If use_md5() is true, this SWISH::Prog::Cache-derived object tracks
 the URI fingerprints.
 
 =item queue 
@@ -149,10 +151,11 @@ sub uri_ok {
     my $self = shift;
     my $uri  = shift or croak "URI required";
     my $str  = $uri->canonical->as_string;
+    $str =~ s/#.*//;    # target anchors create noise
     return 0 if $self->{_uri_ok_cache}->has($str);
     $self->{_uri_ok_cache}->add($str);
 
-    $self->debug and warn "checking uri_ok: $str\n";
+    ( $self->verbose > 1 ) and warn "checking uri_ok: $str\n";
 
     # check base
     if ( $uri->rel( $self->{_base} ) eq $uri ) {
@@ -187,9 +190,10 @@ sub _add_links {
 
     for my $l (@links) {
         my $uri = $l->url_abs or next;
-
-        next if $self->uri_cache->has($uri);    # check only once
-        $self->uri_cache->add( $uri => $self->{_current_depth} );
+        my $uri_str = $uri;
+        $uri_str =~ s/#.*//;         # target anchors create noise
+        next if $self->uri_cache->has($uri_str);    # check only once
+        $self->uri_cache->add( $uri_str => $self->{_current_depth} );
 
         if ( $self->uri_ok($uri) ) {
             $self->queue->put($uri);
@@ -360,8 +364,23 @@ sub get_doc {
     # flag current time for next delay calc.
     $self->{_last_response_time} = time();
 
-    # add its links to the queue
-    $self->_add_links( $uri, $ua->links );
+    # add its links to the queue.
+    # If the resource looks like an XML feed of some kind,
+    # glean its links differently than if it is an HTML response.
+    if ( my $feed = $self->looks_like_feed( $ua->response ) ) {
+        my @links;
+        for my $entry ( $feed->entries ) {
+            push @links, WWW::Mechanize::Link->new( { url => $entry->link } );
+        }
+        $self->_add_links( $uri, @links );
+
+        # we don't want the feed content, we want the links.
+        # TODO make this optional
+        return $ua->response->code;
+    }
+    else {
+        $self->_add_links( $uri, $ua->links );
+    }
 
     # return $uri as a Doc object
     my $use_uri = $ua->success ? $ua->uri : $uri;
@@ -372,12 +391,15 @@ sub get_doc {
         status  => $ua->status,
         success => $ua->success,
         is_html => $ua->is_html,
-        title   => $ua->success
-        ? $ua->is_html
-                ? $ua->title || "No title: $use_uri"
+        title   => (
+            $ua->success
+            ? ( $ua->is_html
+                ? ( $ua->title || "No title: $use_uri" )
                 : $use_uri
-        : "Failed: $use_uri",
-        ct => $ua->success ? $ua->ct : "Unknown",
+                )
+            : "Failed: $use_uri"
+        ),
+        ct => ( $ua->success ? $ua->ct : "Unknown" ),
     };
 
     my $response = $ua->response;
@@ -402,13 +424,14 @@ sub get_doc {
         }
         my $charset = $headers->content_type;
         $charset =~ s/;?$meta->{ct};?//;
+        my $encoding = $headers->content_encoding || $charset;
         my %doc = (
             url     => $meta->{org_uri},
-            modtime => $headers->last_modified || $headers->date,
+            modtime => ( $headers->last_modified || $headers->date ),
             type    => $meta->{ct},
-            content => $buf,
+            content => ( $encoding =~ m/utf-8/i ? to_utf8($buf) : $buf ),
             size => $headers->content_length || length( pack 'C0a*', $buf ),
-            charset => $headers->content_encoding || $charset,
+            charset => $encoding,
         );
         return $self->doc_class->new(%doc);
 
@@ -427,6 +450,34 @@ sub get_doc {
     }
 
     return;    # never get here.
+}
+
+=head2 looks_like_feed( I<http_response> )
+
+Called internally to perform naive heuristics on I<http_response>
+to determine whether it looks like an XML feed of some kind,
+rather than a HTML page.
+
+=cut
+
+sub looks_like_feed {
+    my $self     = shift;
+    my $response = shift or croak "response required";
+    my $headers  = $response->headers;
+    my $ct       = $headers->content_type;
+    if ( $ct eq 'text/html' or $ct eq 'application/xhtml+xml' ) {
+        return 0;
+    }
+    if (   $ct eq 'text/xml'
+        or $ct eq 'application/rss+xml'
+        or $ct eq 'application/rdf+xml'
+        or $ct eq 'application/atom+xml' )
+    {
+        my $xml = $response->content;
+        return XML::Feed->parse( \$xml );
+    }
+
+    return 0;
 }
 
 =head2 crawl( I<uri> )
