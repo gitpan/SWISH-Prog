@@ -11,7 +11,7 @@ use SWISH::Prog::Utils;
 __PACKAGE__->mk_accessors(
     qw( db alias_columns schema use_quotes quote_char ));
 
-our $VERSION = '0.64';
+our $VERSION = '0.65';
 
 my $XMLer = Search::Tools::XML->new();    # included in Utils
 

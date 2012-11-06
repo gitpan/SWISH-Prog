@@ -8,7 +8,7 @@ use Search::Tools::XML;
 use Mail::Box::Manager;
 use base qw( SWISH::Prog::Aggregator );
 
-our $VERSION = '0.64';
+our $VERSION = '0.65';
 
 my $XMLer = Search::Tools::XML->new();
 
@@ -220,7 +220,7 @@ sub get_doc {
         url     => $meta{url},
         modtime => $meta{date},
         parser  => 'XML*',
-        type    => 'application/x-swish-mail',    # TODO is this right?
+        type    => 'application/xml',
         data    => \%meta
     );
 
