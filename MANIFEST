@@ -46,7 +46,6 @@ t/04_mail.t
 t/05_spider.t
 t/06_config.t
 t/08_meta.t
-t/09_xml.t
 t/10_config.t
 t/11-leak-test.t
 t/12-merge.t

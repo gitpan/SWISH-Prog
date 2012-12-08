@@ -291,3 +291,6 @@ Revision history for Perl extension Prog.
         * all Aggregators now set content-type to valid MIME instead of custom Swish types
         * Aggregator->set_parser_from_type() will now not override a defined Doc->parser() value 
 
+0.66    8 Dec 2012
+        * yanked redundant test t/09 as it is now part of Search::Tools
+        * fix t/05 spider to warn on correct missing module; fix spider count
