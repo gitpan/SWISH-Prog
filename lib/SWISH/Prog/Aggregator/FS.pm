@@ -9,7 +9,7 @@ use File::Rules;
 use Data::Dump qw( dump );
 use SWISH::3;
 
-our $VERSION = '0.66';
+our $VERSION = '0.67';
 
 # we rely on file extensions to determine content type
 # and thus parser type. If a file has no extension,
@@ -146,28 +146,6 @@ sub dir_ok {
     }
 
     1;
-}
-
-sub _apply_file_rules {
-    my ( $self, $file ) = @_;
-    if ( !exists $self->{_file_rules} && $self->config->FileRules ) {
-
-        # cache obj
-        $self->{_file_rules} = File::Rules->new( $self->config->FileRules );
-    }
-    if ( exists $self->{_file_rules} ) {
-        $self->debug and warn "applying FileRules";
-        my $match = $self->{_file_rules}->match($file);
-        return $match;
-    }
-    return 0;    # no rules
-}
-
-sub _apply_file_match {
-    my ( $self, $file ) = @_;
-
-    # TODO
-    return 0;    # no-op for now
 }
 
 =head2 get_doc( I<file_path> [, I<stat>, I<ext> ] )

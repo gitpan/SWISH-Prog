@@ -22,19 +22,25 @@ no_index:
 recommends:
   DBI: 0
   File::Find: 0
+  HTML::LinkExtor: 0
+  HTML::Tagset: 0
+  HTTP::Message: 0
+  HTTP::Server::Simple: 0
+  HTTP::Server::Simple::Authen: 0
   JSON: 2
+  LWP::RobotUA: 0
   Mail::Box: 0
   SWISH::API::Object: 0.13
   Term::ProgressBar: 0
+  Test::HTTP::Server::Simple: 0
   URI: 0
-  WWW::Mechanize::GZip: 0
   XML::Feed: 0
   YAML::Syck: 0.72
 requires:
   Config::General: 2.31
   Data::Dump: 0
   File::Basename: 0
-  File::Rules: 0
+  File::Rules: 0.02
   File::Slurp: 0
   File::Temp: 0
   MIME::Types: 0
@@ -55,4 +61,4 @@ resources:
   homepage: http://dev.swish-e.org/wiki/perl
   license: http://dev.perl.org/licenses/
   repository: http://svn.swish-e.org/perl/SWISH-Prog/
-version: 0.66
+version: 0.67

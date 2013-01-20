@@ -4,7 +4,7 @@ use warnings;
 use base qw( SWISH::Prog::Class );
 use Carp;
 
-our $VERSION = '0.66';
+our $VERSION = '0.67';
 
 =pod
 
@@ -20,7 +20,9 @@ SWISH::Prog::Queue - simple in-memory FIFO queue class
  $queue->put( 'foo' );
  $queue->size;          # returns number of items in queue (1)
  $queue->peek;          # returns 'foo' (next value for get())
- $queue->get;           # returns 'foo' and removes it from queue
+ $queue->get;           # returns 'foo' locks it in queue (no one else can get it)
+ $queue->remove('foo'); # returns 'foo' and removes it from queue
+ $queue->clean;         # removes all completed items from queue
 
 =head1 DESCRIPTION
 
@@ -65,7 +67,36 @@ Returns the next item. Default is to shift() it from the front of the queue.
 =cut
 
 sub get {
-    return shift( @{ $_[0]->{q} } );
+    my $self = shift;
+    $self->{locks} ||= {};
+    my $v = shift( @{ $self->{q} } );
+    if ( $self->{locks}->{$v}++ ) {
+        return undef;
+    }
+    return $v;
+}
+
+=head2 remove( I<item> )
+
+Removes I<item> from the queue (unlocks it).
+
+=cut
+
+sub remove {
+    my $self = shift;
+    my $v    = shift;
+    return delete $self->{locks}->{$v};
+}
+
+=head2 clean
+
+Removes all locked items from the queue.
+
+=cut
+
+sub clean {
+    my $self = shift;
+    delete $self->{locks};
 }
 
 =head2 peek

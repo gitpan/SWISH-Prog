@@ -7,7 +7,7 @@ use Data::Dump qw( dump );
 use SWISH::Prog::Config;
 use Scalar::Util qw( blessed );
 
-our $VERSION = '0.66';
+our $VERSION = '0.67';
 
 __PACKAGE__->mk_accessors(qw( debug verbose warnings ));
 
@@ -27,7 +27,7 @@ SWISH::Prog::Class - base class for SWISH::Prog classes
 
 =head1 DESCRIPTION
 
-SWISH::Prog::Class is a subclass of Class::Accessor::Fast.
+SWISH::Prog::Class is a subclass of Rose::ObjectX::CAF.
 It's a base class useful for making simple accessor/mutator methods.
 SWISH::Prog::Class implements some additional methods and features
 useful for SWISH::Prog projects.

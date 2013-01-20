@@ -6,7 +6,7 @@ use Data::Dump qw( dump );
 use File::Basename;
 use Search::Tools::XML;
 
-our $VERSION = '0.66';
+our $VERSION = '0.67';
 
 =pod
 
@@ -145,6 +145,36 @@ and included here simply as a backcompat feature.
 sub perl_to_xml {
     my $self = shift;
     return $XML->perl_to_xml(@_);
+}
+
+=head2 write_log( I<args> )
+
+Logging method. By default writes to stderr via warn().
+
+I<args> is a key/value pair hash, with keys B<uri> and B<msg>.
+
+=cut
+
+sub write_log {
+    my $self = shift;
+    my %args = @_;
+    my $uri  = delete $args{uri} or croak "uri required";
+    my $msg  = delete $args{msg} or croak "msg required";
+    warn sprintf( "[%s][%s] %s [%s]\n", scalar localtime(), $$, $uri, $msg );
+}
+
+=head2 write_log_line([I<char>, I<width>])
+
+Writes I<char> x I<width> to stderr, to provide some visual separation when viewing logs.
+I<char> defaults to C<-> and I<width> to C<80>.
+
+=cut
+
+sub write_log_line {
+    my $self  = shift;
+    my $char  = shift || '-';
+    my $width = shift || 80;
+    warn $char x $width, "\n";
 }
 
 1;

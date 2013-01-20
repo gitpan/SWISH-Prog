@@ -5,19 +5,47 @@ use base qw( SWISH::Prog::Aggregator );
 use Carp;
 use Scalar::Util qw( blessed );
 use URI;
+use HTTP::Cookies;
+use HTTP::Date;
 use SWISH::Prog::Utils;
 use SWISH::Prog::Queue;
 use SWISH::Prog::Cache;
 use SWISH::Prog::Aggregator::Spider::UA;
 use Search::Tools::UTF8;
 use XML::Feed;
+use File::Rules;
 
 __PACKAGE__->mk_accessors(
-    qw( use_md5 uri_cache md5_cache queue ua max_depth delay timeout ));
+    qw(
+        agent
+        authn_callback
+        credential_timeout
+        credentials
+        delay
+        email
+        file_rules
+        follow_redirects
+        keep_alive
+        link_tags
+        max_depth
+        max_files
+        max_size
+        max_time
+        md5_cache
+        modified_since
+        queue
+        remove_leading_dots
+        same_hosts
+        timeout
+        ua
+        uri_cache
+        use_md5
+        )
+);
 
 #use LWP::Debug qw(+);
 
-our $VERSION = '0.66';
+our $VERSION = '0.67';
 
 # TODO make these configurable
 my %parser_types = %SWISH::Prog::Utils::ParserTypes;
@@ -34,7 +62,7 @@ SWISH::Prog::Aggregator::Spider - web aggregator
 
  use SWISH::Prog::Aggregator::Spider;
  my $spider = SWISH::Prog::Aggregator::Spider->new(
-        indexer => SWISH::Prog::Indexer->new
+     indexer => SWISH::Prog::Indexer->new
  );
  
  $spider->indexer->start;
@@ -45,12 +73,12 @@ SWISH::Prog::Aggregator::Spider - web aggregator
 
 SWISH::Prog::Aggregator::Spider is a web crawler similar to
 the spider.pl script in the Swish-e 2.4 distribution. Internally,
-SWISH::Prog::Aggregator::Spider uses WWW::Mechanize to the hard work.
-See SWISH::Prog::Aggregator::Spider::UA.
+SWISH::Prog::Aggregator::Spider uses LWP::RobotUA to do the hard work.
+See L<SWISH::Prog::Aggregator::Spider::UA>.
 
 =head1 METHODS
 
-See SWISH::Prog::Aggregator
+See L<SWISH::Prog::Aggregator>.
 
 =head2 new( I<params> )
 
@@ -58,45 +86,141 @@ All I<params> have their own get/set methods too. They include:
 
 =over
 
-=item use_md5 
+=item agent I<string>
+
+Get/set the user-agent string reported by the user agent.
+
+=item email I<string>
+
+Get/set the email string reported by the user agent.
+
+=item use_md5 I<1|0>
 
 Flag as to whether each URI's content should be fingerprinted
 and compared. Useful if the same content is available under multiple
 URIs and you only want to index it once.
 
-=item uri_cache 
+=item uri_cache I<cache_object>
 
 Get/set the SWISH::Prog::Cache-derived object used to track which URIs have
 been fetched already.
 
-=item md5_cache 
+=item md5_cache I<cache_object>
 
 If use_md5() is true, this SWISH::Prog::Cache-derived object tracks
 the URI fingerprints.
 
-=item queue 
+=item file_rules I<File_Rules_or_ARRAY>
+
+Apply L<File::Rules> object in uri_ok(). I<File_Rules_or_ARRAY> should
+be a L<File::Rules> object or an array of strings suitable to passing
+to File::Rules->new().
+
+=item queue I<queue_object>
 
 Get/set the SWISH::Prog::Queue-derived object for tracking which URIs still
 need to be fetched.
 
-=item ua 
+=item ua I<lwp_useragent>
 
 Get/set the SWISH::Prog::Aggregagor::Spider::UA object.
 
-=item max_depth 
+=item max_depth I<n>
 
 How many levels of links to follow. B<NOTE:> This value describes the number
 of links from the first argument passed to I<crawl>.
 
-=item delay
+Default is unlimited depth.
+
+=item max_time I<n>
+
+This optional key will set the max minutes to spider.   Spidering
+for this host will stop after C<max_time> seconds, and move on to the
+next server, if any.  The default is to not limit by time.
+
+=item max_files I<n>
+
+This optional key sets the max number of files to spider before aborting.
+The default is to not limit by number of files.  This is the number of requests
+made to the remote server, not the total number of files to index (see C<max_indexed>).
+This count is displayted at the end of indexing as C<Unique URLs>.
+
+This feature can (and perhaps should) be use when spidering a web site where dynamic
+content may generate unique URLs to prevent run-away spidering.
+
+=item max_size I<n>
+
+This optional key sets the max size of a file read from the web server.
+This B<defaults> to 5,000,000 bytes.  If the size is exceeded the resource is
+truncated per LWP::UserAgent.
+
+Set max_size to zero for unlimited size.
+
+=item modified_since I<date>
+
+This optional parameter will skip any URIs that do not report having
+been modified since I<date>. The C<Last-Modified> HTTP header is used to
+determine modification time.
+
+=item keep_alive I<1|0>
+
+This optional parameter will enable keep alive requests.  This can dramatically speed
+up spidering and reduce the load on server being spidered.  The default is to not use
+keep alives, although enabling it will probably be the right thing to do.
+
+To get the most out of keep alives, you may want to set up your web server to
+allow a lot of requests per single connection (i.e MaxKeepAliveRequests on Apache).
+Apache's default is 100, which should be good.
+
+When a connection is not closed the spider does not wait the "delay"
+time when making the next request.  In other words, there is no delay in
+requesting documents while the connection is open.
+
+Note: you must have at least libwww-perl-5.53_90 installed to use this feature.
+
+=item delay I<n>
 
 Get/set the number of seconds to wait between making requests. Default is
 5 seconds (a very friendly delay).
 
-=item timeout
+=item timeout I<n>
 
 Get/set the number of seconds to wait before considering the remote
 server unresponsive. The default is 10.
+
+=item authn_callback I<code_ref>
+
+CODE reference to fetch username/password credentials when necessary. See also
+C<credentials>.
+
+=item credential_timeout I<n>
+
+Number of seconds to wait before skipping manual prompt for username/password.
+
+=item credentials I<user:pass>
+
+String with C<username>:C<password> pair to be used when prompted by 
+the server.
+
+=item follow_redirects I<1|0>
+
+By default, 3xx responses from the server will be followed when
+they are on the same hostname. Set to false (0) to not follow
+redirects.
+
+=item link_tags
+
+TODO
+
+=item remove_leading_dots I<1|0>
+
+Microsoft server hack.
+
+=item same_hosts I<array_ref>
+
+ARRAY ref of hostnames to be treated as identical to the original
+host being spidered. By default the spider will not follow
+links to different hosts.
 
 =back
 
@@ -111,30 +235,103 @@ sub init {
     $self->SUPER::init(@_);
 
     # defaults
-    $self->{agent}         ||= 'swish-e http://swish-e.org/';
-    $self->{email}         ||= 'swish@user.failed.to.set.email.invalid';
-    $self->{max_wait_time} ||= 30;
-    $self->{max_size}      ||= 5_000_000;
-    $self->{max_depth} = 1 unless defined( $self->{max_depth} );
-    $self->{delay}     = 5 unless defined $self->{delay};
+    $self->{agent} ||= 'swish-prog-spider http://swish-e.org/';
+    $self->{email} ||= 'swish@user.failed.to.set.email.invalid';
+    $self->{use_cookies}      = 1 unless defined $self->{use_cookies};
+    $self->{follow_redirects} = 1 unless defined $self->{follow_redirects};
+    $self->{max_files}        = 0 unless defined $self->{max_files};
+    $self->{max_size}  = 5_000_000 unless defined $self->{max_size};
+    $self->{max_depth} = undef     unless defined( $self->{max_depth} );
+    $self->{delay}     = 5         unless defined $self->{delay};
     croak "delay must be expressed in seconds" if $self->{delay} =~ m/\D/;
+
+    if ( $self->{modified_since} ) {
+        my $epoch
+            = $self->{modified_since} =~ m/\D/
+            ? str2time( $self->{modified_since} )
+            : $self->{modified_since};
+
+        if ( !defined $epoch ) {
+            croak
+                "Invalid datetime in modified_since: $self->{modified_since}";
+        }
+        $self->{modified_since} = $epoch;
+    }
+
+    $self->{credential_timeout} = 30
+        unless exists $self->{credential_timeout};
+    croak "credential_timeout must be a number"
+        if defined $self->{credential_timeout}
+        and $self->{credential_timeout} =~ m/\D/;
 
     $self->{queue}     ||= SWISH::Prog::Queue->new;
     $self->{uri_cache} ||= SWISH::Prog::Cache->new;
-    $self->{_uri_ok_cache} = SWISH::Prog::Cache->new;
-    $self->{_auth_cache}   = SWISH::Prog::Cache->new;  # ALWAYS inmemory cache
+    $self->{_auth_cache} = SWISH::Prog::Cache->new;    # ALWAYS inmemory cache
+    $self->{ua} ||= SWISH::Prog::Aggregator::Spider::UA->new( $self->{agent},
+        $self->{email}, );
+
+    # whitelist which HTML tags we consider "links"
+    # should be subset of what HTML::LinkExtor considers links
+    $self->{link_tags} = [ 'a', 'frame', 'iframe' ]
+        unless ref $self->{link_tags} eq 'ARRAY';
     $self->{ua}
-        ||= SWISH::Prog::Aggregator::Spider::UA->new( stack_depth => 0 );
+        ->set_link_tags( { map { lc($_) => 1 } @{ $self->{link_tags} } } );
 
     $self->{timeout} = 10 unless defined $self->{timeout};
+    croak "timeout must be a number" if $self->{timeout} =~ m/\D/;
+
+    # we handle our own delay
+    $self->{ua}->delay(0);
+
     $self->{ua}->timeout( $self->{timeout} );
 
+    # TODO we test this using HEAD request. Set here too?
+    #$self->{ua}->max_size( $self->{max_size} ) if $self->{max_size};
+
+    if ( $self->{use_cookies} ) {
+        $self->{ua}->cookie_jar( HTTP::Cookies->new() );
+    }
+    if ( $self->{keep_alive} ) {
+        if ( $self->{ua}->can('conn_cache') ) {
+            my $keep_alive
+                = $self->{keep_alive} =~ m/^\d+$/
+                ? $self->{keep_alive}
+                : 1;
+            $self->{ua}->conn_cache( { total_capacity => $keep_alive } );
+        }
+        else {
+            warn
+                "can't use keep-alive: conn_cache() method not available on ua "
+                . ref( $self->{ua} );
+        }
+    }
+
     $self->{_current_depth} = 1;
+
+    $self->{same_hosts} ||= [];
+    $self->{same_host_lookup} = { map { $_ => 1 } @{ $self->{same_hosts} } };
 
     if ( $self->{use_md5} ) {
         eval "require Digest::MD5" or croak $@;
         $self->{md5_cache} ||= SWISH::Prog::Cache->new;
     }
+
+    # if SWISH::Prog::Config defined, use that for some items
+    if ( $self->{indexer} and $self->config ) {
+        if ( $self->config->FileRules && !$self->{file_rules} ) {
+            $self->{file_rules}
+                = File::Rules->new( $self->config->FileRules );
+        }
+    }
+
+    # make it an object if it is just an array
+    if ( $self->{file_rules} and !blessed( $self->{file_rules} ) ) {
+        $self->{file_rules} = File::Rules->new( $self->{file_rules} );
+    }
+
+    # from spider.pl. not sure if we need it or not.
+    # Lame Microsoft
+    $URI::ABS_REMOTE_LEADING_DOTS = $self->{remove_leading_dots} ? 1 : 0;
 
     return $self;
 }
@@ -152,29 +349,138 @@ sub uri_ok {
     my $uri  = shift or croak "URI required";
     my $str  = $uri->canonical->as_string;
     $str =~ s/#.*//;    # target anchors create noise
-    return 0 if $self->{_uri_ok_cache}->has($str);
-    $self->{_uri_ok_cache}->add($str);
 
-    ( $self->verbose > 1 ) and warn "checking uri_ok: $str\n";
+    if ( $self->verbose > 1 || $self->debug ) {
+        $self->write_log_line();
+        $self->write_log(
+            uri => $uri,
+            msg => "checking if ok",
+        );
+    }
 
-    # check base
-    if ( $uri->rel( $self->{_base} ) eq $uri ) {
+    if ( $uri->scheme !~ m,^http, ) {
+        $self->debug and $self->write_log(
+            uri => $uri,
+            msg => "skipping, unsupported scheme"
+        );
         return 0;
+    }
+
+    # check if we're on the same host.
+    if ( $uri->rel( $self->{_base} ) eq $uri ) {
+
+        # not on this host. check our aliases
+        if ( !exists $self->{same_host_lookup}
+            ->{ $uri->canonical->authority || '' } )
+        {
+            my $host = $uri->canonical->authority;
+            $self->debug
+                and $self->write_log(
+                uri => $uri,
+                msg => "skipping, different host $host",
+                );
+            return 0;
+        }
+
+        # in same host lookup, so proceed.
     }
 
     my $path = $uri->path;
     my $mime = $utils->mime_type($path);
 
     if ( !exists $parser_types{$mime} ) {
-
-        $self->debug and warn "no parser for $mime";
+        $self->debug and $self->write_log(
+            uri => $uri,
+            msg => "skipping, no parser for $mime",
+        );
         return 0;
     }
 
-    # TODO
-    # check robot rules
     # check regex
+    if ( $self->file_rules ) {
 
+        if ( $self->_apply_file_rules( $uri->path_query, $self->file_rules )
+            && !$self->_apply_file_match( $uri->path_query,
+                $self->file_rules ) )
+        {
+            $self->debug and $self->write_log(
+                uri => $uri,
+                msg => "skipping, matched file_rules",
+            );
+            return 0;
+        }
+    }
+
+    # head request to check max_size and modified_since
+    if ( $self->max_size or $self->modified_since ) {
+        my %head_args = (
+            uri     => $uri,
+            delay   => 0,                # assume each get() applies the delay
+            debug   => $self->debug,
+            verbose => $self->verbose,
+        );
+
+        if ( my ( $user, $pass ) = $self->_get_user_pass($uri) ) {
+            $head_args{user} = $user;
+            $head_args{pass} = $pass;
+        }
+        my $resp = $self->ua->head(%head_args);
+
+        # early abort if resource doesn't exist
+        if ( $resp->status == 404 ) {
+            $self->debug
+                and $self->write_log(
+                uri => $uri,
+                msg => "skipping, 404 not found",
+                );
+            return 0;
+        }
+
+        # redirect? assume ok now and _make_request will check on it later.
+        if ( $resp->is_redirect ) {
+            $self->debug
+                and $self->write_log(
+                uri => $uri,
+                msg => "deferring, is_redirect",
+                );
+            return 1;
+        }
+
+        my $last_mod = $resp->last_modified;
+        if (    $last_mod
+            and $self->modified_since
+            and $self->modified_since > $last_mod )
+        {
+            $self->debug
+                and $self->write_log(
+                uri => $uri,
+                msg => sprintf(
+                    "skipping, last modified %s (%s < %s)",
+                    $resp->header('last-modified'), $last_mod,
+                    $self->modified_since
+                ),
+                );
+            return 0;
+        }
+
+        if ( $resp->content_length and $self->max_size ) {
+            if ( $resp->content_length > $self->max_size ) {
+                $self->debug
+                    and $self->write_log(
+                    uri => $uri,
+                    msg => sprintf( "skipping, %s > max_size",
+                        $resp->content_length ),
+                    );
+                return 0;
+            }
+        }
+
+    }
+
+    ( $self->verbose > 1 || $self->debug ) and $self->write_log(
+        uri => $uri,
+        msg => "ok",
+    );
     return 1;
 }
 
@@ -189,29 +495,33 @@ sub _add_links {
     $self->{_parent} ||= $parent;    # first time.
 
     for my $l (@links) {
-        my $uri = $l->url_abs or next;
-        my $uri_str = $uri;
-        $uri_str =~ s/#.*//;         # target anchors create noise
-        next if $self->uri_cache->has($uri_str);    # check only once
-        $self->uri_cache->add( $uri_str => $self->{_current_depth} );
+        my $uri = $l->abs( $self->{_base} ) or next;
+        $uri = $uri->canonical;      # normalize
+        if ( $self->uri_cache->has($uri) ) {
+            $self->debug and $self->write_log(
+                uri => $uri,
+                msg => "skipping, already checked",
+            );
+            next;
+        }
+        $self->uri_cache->add( $uri => $self->{_current_depth} );
 
         if ( $self->uri_ok($uri) ) {
-            $self->queue->put($uri);
+            $self->add_to_queue($uri);
         }
     }
 }
 
-#=================================================================================
+# ported from spider.pl
 # Do we need to authorize?  If so, ask for password and request again.
 # First we try using any cached value
 # Then we try using the get_password callback
 # Then we ask.
 
-# TODO!!
 sub _authorize {
-    my ( $response, $server, $uri, $parent, $depth ) = @_;
+    my ( $self, $uri, $response ) = @_;
 
-    delete $server->{last_auth};    # since we know that doesn't work
+    delete $self->{last_auth};    # since we know that doesn't work
 
     if (   $response->header('WWW-Authenticate')
         && $response->header('WWW-Authenticate') =~ /realm="([^"]+)"/i )
@@ -220,61 +530,69 @@ sub _authorize {
         my $user_pass;
 
         # Do we have a cached user/pass for this realm?
-        unless ( $server->{_request}{auth}{$uri}++ )
-        {                           # only each URI only once
+        # only each URI only once
+        unless ( $self->{_request}->{auth}->{$uri}++ ) {
             my $key = $uri->canonical->host_port . ':' . $realm;
 
-            if ( $user_pass = $server->{auth_cache}{$key} ) {
+            if ( $user_pass = $self->{_auth_cache}->get($key) ) {
 
                 # If we didn't just try it, try again
                 unless ( $uri->userinfo && $user_pass eq $uri->userinfo ) {
 
                     # add the user/pass to the URI
                     $uri->userinfo($user_pass);
-                    return process_link( $server, $uri, $parent, $depth );
+
+                   #warn " >> set userinfo via _auth_cache\n" if $self->debug;
+                    return 1;
+                }
+                else {
+                    # we've tried this before
+                    #warn "tried $user_pass before";
+                    return 0;
                 }
             }
         }
 
         # now check for a callback password (if $user_pass not set)
-        unless ( $user_pass || $server->{_request}{auth}{callback}++ ) {
+        unless ( $user_pass || $self->{_request}->{auth}->{callback}++ ) {
 
             # Check for a callback function
-            $user_pass
-                = $server->{get_password}
-                ->( $uri, $server, $response, $realm )
-                if ref $server->{get_password} eq 'CODE';
+            if ( $self->{authn_callback}
+                and ref $self->{authn_callback} eq 'CODE' )
+            {
+                $user_pass = $self->{authn_callback}
+                    ->( $self, $uri, $response, $realm );
+                $uri->userinfo($user_pass);
+
+                #warn " >> set userinfo via authn_callback\n" if $self->debug;
+                return 1;
+            }
         }
 
         # otherwise, prompt (over and over)
-
         if ( !$user_pass ) {
-            $user_pass = get_basic_credentials( $uri, $server, $realm );
+            $user_pass = $self->_get_basic_credentials( $uri, $realm );
         }
 
         if ($user_pass) {
             $uri->userinfo($user_pass);
-            $server->{cur_realm}
-                = $realm;    # save so we can cache if it's valid
-            my $links = process_link( $server, $uri, $parent, $depth );
-            delete $server->{cur_realm};
-            return $links;
+            $self->{cur_realm} = $realm;  # save so we can cache if it's valid
+            return 1;
         }
     }
 
-    return;                  # Give up
+    return 0;
+
 }
 
-# TODO
+# From spider.pl
 sub _get_basic_credentials {
-    my ( $uri, $server, $realm ) = @_;
+    my ( $self, $uri, $realm ) = @_;
 
     # Exists but undefined means don't ask.
     return
-        if exists $server->{credential_timeout}
-            && !defined $server->{credential_timeout};
-
-    # Exists but undefined means don't ask.
+        if exists $self->{credential_timeout}
+        && !defined $self->{credential_timeout};
 
     my $netloc = $uri->canonical->host_port;
 
@@ -284,7 +602,7 @@ sub _get_basic_credentials {
         local $SIG{ALRM} = sub { die "timed out\n" };
 
         # a zero timeout means don't time out
-        alarm( $server->{credential_timeout} ) unless $^O =~ /Win32/i;
+        alarm( $self->{credential_timeout} ) unless $^O =~ /Win32/i;
 
         if ( $uri->userinfo ) {
             print STDERR "\nSorry: invalid username/password\n";
@@ -297,7 +615,7 @@ sub _get_basic_credentials {
         chomp($user) if $user;
         die "No Username specified\n" unless length $user;
 
-        alarm( $server->{credential_timeout} ) unless $^O =~ /Win32/i;
+        alarm( $self->{credential_timeout} ) unless $^O =~ /Win32/i;
 
         print STDERR "Password: ";
         system("stty -echo");
@@ -316,6 +634,51 @@ sub _get_basic_credentials {
 
 }
 
+=head2 add_to_queue( I<uri> )
+
+Add I<uri> to the queue.
+
+=cut
+
+sub add_to_queue {
+    my $self = shift;
+    my $uri = shift or croak "uri required";
+    return $self->queue->put($uri);
+}
+
+=head2 next_from_queue
+
+Return next I<uri> from queue.
+
+=cut
+
+sub next_from_queue {
+    my $self = shift;
+    return $self->queue->get();
+}
+
+=head2 left_in_queue
+
+Returns queue()->size().
+
+=cut
+
+sub left_in_queue {
+    return shift->queue->size();
+}
+
+=head2 remove_from_queue( I<uri> )
+
+Calls queue()->remove(I<uri>).
+
+=cut
+
+sub remove_from_queue {
+    my $self = shift;
+    my $uri = shift or croak "uri required";
+    return $self->queue->remove($uri);
+}
+
 =head2 get_doc
 
 Returns the next URI from the queue() as a SWISH::Prog::Doc object,
@@ -329,86 +692,168 @@ sub get_doc {
     my $self = shift;
 
     # return unless we have something in the queue
-    return unless $self->queue->size;
+    return unless $self->left_in_queue();
 
     # pop the queue and make it a URI
-    my $uri   = $self->queue->get;
+    my $uri   = $self->next_from_queue();
     my $depth = $self->uri_cache->get($uri);
 
     $self->debug
-        and warn
-        sprintf( "depth=%d max_depth=%d\n", $depth, $self->max_depth );
+        and $self->write_log(
+        uri => $uri,
+        msg => sprintf(
+            "depth:%d max_depth:%s",
+            $depth, ( $self->max_depth || 'undef' )
+        ),
+        );
 
-    return if $depth > $self->max_depth;
+    return if defined $self->max_depth && $depth > $self->max_depth;
+
+    $self->{_cur_depth} = $depth;
+
+    my $doc = $self->_make_request($uri);
+
+    if ($doc) {
+        $self->remove_from_queue($uri);
+    }
+
+    return $doc;
+}
+
+=head2 get_authorized_doc( I<uri>, I<response> )
+
+Called internally when the server returns a 401 or 403 response.
+Will attempt to determine the correct credentials for I<uri>
+based on the previous attempt in I<response> and what you 
+have configured in B<credentials>, B<authn_callback> or when
+manually prompted.
+
+=cut
+
+sub get_authorized_doc {
+    my $self     = shift;
+    my $uri      = shift or croak "uri required";
+    my $response = shift or croak "response required";
+
+    # set up credentials
+    $self->_authorize( $uri, $response->http_response ) or return;
+
+    return $self->_make_request($uri);
+}
+
+sub _make_request {
+    my ( $self, $uri ) = @_;
 
     # get our useragent
-    my $ua = $self->ua;
-
-    # figure out our delay between requests
+    my $ua    = $self->ua;
     my $delay = 0;
-    if ( $self->{keep_alive_connection} ) {
+    if ( $self->{keep_alive} ) {
         $delay = 0;
     }
-    elsif ( !$self->{delay} || !$self->{_last_response_time} ) {
+    elsif ( !$self->{delay} or !$self->{_last_response_time} ) {
         $delay = 0;
     }
     else {
-        $delay = $self->{delay} - ( time() - $self->{_last_response_time} );
+        my $elapsed = time() - $self->{_last_response_time};
+        $delay = $self->{delay} - $elapsed;
+        $delay = 0 if $delay < 0;
+        $self->debug
+            and $self->write_log(
+            uri => $uri,
+            msg => "elapsed:$elapsed delay:$delay",
+            );
     }
 
-    warn "get $uri (delay: $delay  depth: $depth)\n" if $self->verbose;
+    $self->write_log(
+        uri => $uri,
+        msg => "GET delay:$delay",
+    ) if $self->verbose;
 
-    # fetch the uri, waiting $delay seconds before trying.
-    $ua->get( $uri, $delay );
+    my %get_args = (
+        uri     => $uri,
+        delay   => $delay,
+        debug   => $self->debug,
+        verbose => $self->verbose,
+    );
+
+    if ( my ( $user, $pass ) = $self->_get_user_pass($uri) ) {
+        $get_args{user} = $user;
+        $get_args{pass} = $pass;
+    }
+
+    # fetch the uri. $ua handles delay internally.
+    my $response      = $ua->get(%get_args);
+    my $http_response = $response->http_response;
 
     # flag current time for next delay calc.
     $self->{_last_response_time} = time();
 
+    # redirect? follow, conditionally.
+    if ( $response->is_redirect ) {
+        my $location = $response->header('location');
+        if ( !$location ) {
+            $self->write_log(
+                uri => $uri,
+                msg => "skipping, redirect without a Location header",
+            );
+            return $response->status;
+        }
+        $self->debug
+            and $self->write_log(
+            uri => $uri,
+            msg => "redirect: $location",
+            );
+        if ( $self->follow_redirects ) {
+            $self->_add_links( $uri,
+                URI->new_abs( $location, $http_response->base ) );
+        }
+        return $response->status;
+    }
+
     # add its links to the queue.
     # If the resource looks like an XML feed of some kind,
     # glean its links differently than if it is an HTML response.
-    if ( my $feed = $self->looks_like_feed( $ua->response ) ) {
+    if ( my $feed = $self->looks_like_feed($http_response) ) {
         my @links;
         for my $entry ( $feed->entries ) {
-            push @links, WWW::Mechanize::Link->new( { url => $entry->link } );
+            push @links, URI->new( $entry->link );
         }
         $self->_add_links( $uri, @links );
 
         # we don't want the feed content, we want the links.
         # TODO make this optional
-        return $ua->response->code;
+        return $response->status;
     }
     else {
-        $self->_add_links( $uri, $ua->links );
+        $self->_add_links( $uri, $response->links );
     }
 
     # return $uri as a Doc object
-    my $use_uri = $ua->success ? $ua->uri : $uri;
+    my $use_uri = $response->success ? $ua->uri : $uri;
     my $meta = {
         org_uri => $uri,
         ret_uri => ( $use_uri || $uri ),
-        depth   => $depth,
-        status  => $ua->status,
-        success => $ua->success,
-        is_html => $ua->is_html,
+        depth   => delete $self->{_cur_depth},
+        status  => $response->status,
+        success => $response->success,
+        is_html => $response->is_html,
         title   => (
-            $ua->success
-            ? ( $ua->is_html
-                ? ( $ua->title || "No title: $use_uri" )
+            $response->success
+            ? ( $response->is_html
+                ? ( $response->title || "No title: $use_uri" )
                 : $use_uri
                 )
             : "Failed: $use_uri"
         ),
-        ct => ( $ua->success ? $ua->ct : "Unknown" ),
+        ct => ( $response->success ? $response->ct : "Unknown" ),
     };
 
-    my $response = $ua->response;
-    my $headers  = $response->headers;
-    my $buf      = $response->content;
+    my $headers = $http_response->headers;
+    my $buf     = $response->content;
 
     if ( $self->{use_md5} ) {
         my $fingerprint = $response->header('Content-MD5')
-            || Digest::MD5::md5($buf);
+            || Digest::MD5::md5_base64($buf);
         if ( $self->md5_cache->has($fingerprint) ) {
             return "duplicate content for "
                 . $self->md5_cache->get($fingerprint);
@@ -416,11 +861,14 @@ sub get_doc {
         $self->md5_cache->add( $fingerprint => $uri );
     }
 
-    if ( $ua->success ) {
+    if ( $response->success ) {
 
         my $content_type = $meta->{ct};
         if ( !exists $parser_types{$content_type} ) {
-            warn "no parser for $content_type";
+            $self->write_log(
+                uri => $uri,
+                msg => "no parser for $content_type",
+            );
         }
         my $charset = $headers->content_type;
         $charset =~ s/;?$meta->{ct};?//;
@@ -433,23 +881,87 @@ sub get_doc {
             size => $headers->content_length || length( pack 'C0a*', $buf ),
             charset => $encoding,
         );
+
+        # cache whatever credentials were used so we can re-use
+        if ( $self->{cur_realm} and $uri->userinfo ) {
+            my $key = $uri->canonical->host_port . ':' . $self->{cur_realm};
+            $self->{_auth_cache}->add( $key => $uri->userinfo );
+
+            # not too sure of the best logic here
+            my $path = $uri->path;
+            $path =~ s!/[^/]*$!!;
+            $self->{last_auth} = {
+                path => $path,
+                auth => $uri->userinfo,
+            };
+        }
+
+        # return doc
         return $self->doc_class->new(%doc);
 
     }
-    elsif ( $response->code == 401 ) {
+    elsif ( $response->status == 401 ) {
 
-        # TODO get auth
-        warn $response->status_line;
-        return $response->code;
+        # authorize and try again
+        $self->write_log(
+            uri => $uri,
+            msg => sprintf( "authn denied, retrying, %s",
+                $response->status_line ),
+        );
+        return $self->get_authorized_doc( $uri, $response )
+            || $response->status;
+    }
+    elsif ($response->status == 403
+        && $http_response->status_line =~ m/robots.txt/ )
+    {
 
+        # ignore
+        $self->write_log(
+            uri => $uri,
+            msg => sprintf( "skipped, %s", $http_response->status_line ),
+        );
+        return $self->get_authorized_doc( $uri, $response )
+            || $response->status;
+    }
+    elsif ( $response->status == 403 ) {
+
+        # authorize and try again
+        $self->write_log(
+            uri => $uri,
+            msg => sprintf( "retrying, %s", $http_response->status_line ),
+        );
+        return $self->get_authorized_doc( $uri, $response );
     }
     else {
 
-        warn $response->status_line;
-        return $response->code;
+        $self->write_log(
+            uri => $uri,
+            msg => $http_response->status_line,
+        );
+        return $response->status;
     }
 
     return;    # never get here.
+}
+
+sub _get_user_pass {
+    my $self = shift;
+    my $uri  = shift;
+
+    # Set basic auth if defined - use URI specific first, then credentials.
+    # this doesn't track what should have authorization
+    my $last_auth;
+    if ( $self->{last_auth} ) {
+        my $path = $uri->path;
+        $path =~ s!/[^/]*$!!;
+        $last_auth = $self->{last_auth}->{auth}
+            if $self->{last_auth}->{path} eq $path;
+    }
+
+    my ( $user, $pass ) = split /:/,
+        ( $last_auth || $uri->userinfo || $self->credentials || '' );
+
+    return ( $user, $pass );
 }
 
 =head2 looks_like_feed( I<http_response> )
@@ -473,7 +985,7 @@ sub looks_like_feed {
         or $ct eq 'application/rdf+xml'
         or $ct eq 'application/atom+xml' )
     {
-        my $xml = $response->content;
+        my $xml = $response->decoded_content;    # TODO or content()
         return XML::Feed->parse( \$xml );
     }
 
@@ -483,7 +995,11 @@ sub looks_like_feed {
 =head2 crawl( I<uri> )
 
 Implements the required crawl() method. Recursively fetches I<uri>
-and its child links to a depth set in max_depth().
+and its child links to a depth set in max_depth(). 
+
+Will quit after max_files() unless max_files==0.
+
+Will quit after max_time() seconds unless max_time==0.
 
 =cut
 
@@ -491,22 +1007,57 @@ sub crawl {
     my $self = shift;
     my @urls = @_;
 
-    my $indexer = $self->indexer;
+    my $indexer = $self->indexer;    # may be undef
 
     for my $url (@urls) {
-        $self->debug and warn "crawling $url\n";
-        my $uri = URI->new($url);
+        my $started = time();
+        $self->debug and $self->write_log(
+            uri => $url,
+            msg => "crawling",
+        );
+
+        my $uri = URI->new($url)->canonical;
         $self->uri_cache->add( $uri => 1 );
-        $self->queue->put($uri);
-        $self->{_base} = $uri->canonical->as_string;
+        $self->add_to_queue($uri);
+        $self->{_base} = $uri->as_string;
         while ( my $doc = $self->get_doc ) {
+            $self->debug and $self->write_log_line();
             next unless blessed($doc);
-            $indexer->process($doc);
+
+            # indexer not required
+            $indexer->process($doc) if $indexer;
+
             $self->_increment_count;
+
+            # abort if we've met any max_* conditions
+            last if $self->max_files and $self->count >= $self->max_files;
+            last
+                if $self->max_time
+                and ( time() - $started ) > $self->max_time;
         }
     }
 
     return $self->count;
+}
+
+=head2 write_log( I<args> )
+
+Passes I<args> to SWISH::Prog::Utils::write_log().
+
+=cut
+
+sub write_log {
+    SWISH::Prog::Utils::write_log(@_);
+}
+
+=head2 write_log_line([I<char>, I<width>])
+
+Pass through to SWISH::Prog::Utils::write_log_line().
+
+=cut
+
+sub write_log_line {
+    SWISH::Prog::Utils::write_log_line(@_);
 }
 
 1;

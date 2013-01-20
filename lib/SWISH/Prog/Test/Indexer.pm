@@ -1,64 +1,50 @@
-package SWISH::Prog::Results;
+package SWISH::Prog::Test::Indexer;
 use strict;
 use warnings;
-use base qw( SWISH::Prog::Class );
-use Carp;
+use base 'SWISH::Prog::Indexer';
 
 our $VERSION = '0.67';
 
-__PACKAGE__->mk_accessors(
-    qw(
-        hits
-        query
-        ),
-);
-
-=head1 NAME
-
-SWISH::Prog::Results - base results class
-
-=head1 SYNOPSIS
-
- my $searcher = SWISH::Prog::Searcher->new(
-                    invindex        => 'path/to/index',
-                    query_class     => 'SWISH::Prog::Query',
-                    query_parser    => $swish_prog_queryparser,
-                );
-                
- my $results = $searcher->search( 'foo bar' );
- while (my $result = $results->next) {
-     printf("%4d %s\n", $result->score, $result->uri);
- }
-
-=head1 DESCRIPTION
-
-SWISH::Prog::Results is a base results class. It defines
-the APIs that all SWISH::Prog storage backends adhere to in
-returning results from a SWISH::Prog::InvIndex.
-
-=head1 METHODS
-
-=head2 query
-
-Should return the search query as it was evaluated by the Searcher.
-
-=head2 hits
-
-Returns the number of matching documents for the query.
-
-=head2 next
-
-Return the next Result.
-
-=cut
-
-sub next {
-    croak "must override next() in your subclass";
-}
+sub test_mode {1}
+sub start     { }
+sub finish    { }
 
 1;
 
 __END__
+
+=pod
+
+=head1 NAME
+
+SWISH::Prog::Test::Indexer - test indexer class
+
+=head1 SYNOPSIS
+
+ use SWISH::Prog::Test::Indexer;
+ 
+ my $spider = SWISH::Prog::Aggregator::Spider->new(
+    indexer => SWISH::Prog::Test::Indexer->new()
+ );
+ $spider->crawl('http://localhost/foo');
+
+=head1 DESCRIPTION
+
+SWISH::Prog::Test::Indexer is for testing other
+components of SWISH::Prog where no index is desired.
+For example, testing aggregator features without any need
+to store the documents aggregated.
+
+=head1 METHODS
+
+These methods are overridden as no-ops.
+
+=head2 test_mode
+
+=head2 start
+
+=head2 finish
+
 
 =head1 AUTHOR
 

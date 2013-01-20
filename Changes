@@ -294,3 +294,14 @@ Revision history for Perl extension Prog.
 0.66    8 Dec 2012
         * yanked redundant test t/09 as it is now part of Search::Tools
         * fix t/05 spider to warn on correct missing module; fix spider count
+
+0.67    19 Jan 2013
+        * Spider now uses LWP::RobotUA to respect robots.txt. Dependency on WWW::Mechanize is
+          removed.
+        * Spider authorization features now work. Added bona fide test suite for spidering.
+        * expand Queue API to add remove() and clean() and internal locking on get()
+        * Spider->modified_since feature to allow for incremental crawls
+        * Added new class SWISH::Prog::Aggregator::Spider::Response, refactoring appropriate UA methods
+          into Response class since WWW::Mechanize was intentionally blurring the logical distinction.
+        * Spider->file_rules (new feature) follows same code path as Aggregator::FS.
+        * added Utils::write_log and ::write_log_line methods for standardizing debug output

@@ -7,7 +7,7 @@ use Carp;
 use Data::Dump qw( dump );
 use Text::ParseWords;
 
-our $VERSION = '0.66';
+our $VERSION = '0.67';
 
 __PACKAGE__->mk_accessors(qw( rules ));
 

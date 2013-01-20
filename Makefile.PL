@@ -10,7 +10,7 @@ requires 'File::Basename'     => 0;
 requires 'Time::HiRes'        => 0;
 requires 'MIME::Types'        => 0;
 requires 'Path::Class'        => 0;
-requires 'File::Rules'        => 0;
+requires 'File::Rules'        => '0.02';
 requires 'SWISH::Filter'      => '0.15';
 requires 'Rose::DateTime'     => 0;
 requires 'Rose::ObjectX::CAF' => 0;         # Search::Tools also requires this
@@ -27,16 +27,22 @@ requires 'SWISH::3'           => 1.000005;
 # recommended Aggregator support
 
 # FF should be part of base install just like Carp
-recommends 'File::Find'           => 0;
-recommends 'WWW::Mechanize::GZip' => 0;
-recommends 'XML::Feed'            => 0;
-recommends 'URI'                  => 0;
-recommends 'SWISH::API::Object'   => 0.13;     # native searcher requires
-recommends 'YAML::Syck'           => '0.72';
-recommends 'JSON'                 => 2.0;
-recommends 'Mail::Box'            => 0;
-recommends 'DBI'                  => 0;
-recommends 'Term::ProgressBar'    => 0;
+recommends 'File::Find'                   => 0;
+recommends 'LWP::RobotUA'                 => 0;
+recommends 'HTML::Tagset'                 => 0;
+recommends 'HTML::LinkExtor'              => 0;
+recommends 'HTTP::Message'                => 0;
+recommends 'HTTP::Server::Simple'         => 0;
+recommends 'HTTP::Server::Simple::Authen' => 0;
+recommends 'Test::HTTP::Server::Simple'   => 0;
+recommends 'XML::Feed'                    => 0;
+recommends 'URI'                          => 0;
+recommends 'SWISH::API::Object'           => 0.13;  # native searcher requires
+recommends 'YAML::Syck'                   => '0.72';
+recommends 'JSON'                         => 2.0;
+recommends 'Mail::Box'                    => 0;
+recommends 'DBI'                          => 0;
+recommends 'Term::ProgressBar'            => 0;
 
 perl_version '5.8.3';
 license 'http://dev.perl.org/licenses/';
