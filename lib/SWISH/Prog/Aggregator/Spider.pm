@@ -15,6 +15,11 @@ use Search::Tools::UTF8;
 use XML::Feed;
 use File::Rules;
 
+#
+# TODO tests for cookies, non-text urls needing filters
+#
+#
+
 __PACKAGE__->mk_accessors(
     qw(
         agent
@@ -45,7 +50,7 @@ __PACKAGE__->mk_accessors(
 
 #use LWP::Debug qw(+);
 
-our $VERSION = '0.67';
+our $VERSION = '0.68';
 
 # TODO make these configurable
 my %parser_types = %SWISH::Prog::Utils::ParserTypes;
@@ -497,14 +502,14 @@ sub _add_links {
     for my $l (@links) {
         my $uri = $l->abs( $self->{_base} ) or next;
         $uri = $uri->canonical;      # normalize
-        if ( $self->uri_cache->has($uri) ) {
+        if ( $self->uri_cache->has("$uri") ) {
             $self->debug and $self->write_log(
                 uri => $uri,
                 msg => "skipping, already checked",
             );
             next;
         }
-        $self->uri_cache->add( $uri => $self->{_current_depth} );
+        $self->uri_cache->add( "$uri" => $self->{_current_depth} );
 
         if ( $self->uri_ok($uri) ) {
             $self->add_to_queue($uri);
@@ -696,7 +701,7 @@ sub get_doc {
 
     # pop the queue and make it a URI
     my $uri   = $self->next_from_queue();
-    my $depth = $self->uri_cache->get($uri);
+    my $depth = $self->uri_cache->get("$uri");
 
     $self->debug
         and $self->write_log(
@@ -1017,7 +1022,7 @@ sub crawl {
         );
 
         my $uri = URI->new($url)->canonical;
-        $self->uri_cache->add( $uri => 1 );
+        $self->uri_cache->add( "$uri" => 1 );
         $self->add_to_queue($uri);
         $self->{_base} = $uri->as_string;
         while ( my $doc = $self->get_doc ) {

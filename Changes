@@ -305,3 +305,7 @@ Revision history for Perl extension Prog.
           into Response class since WWW::Mechanize was intentionally blurring the logical distinction.
         * Spider->file_rules (new feature) follows same code path as Aggregator::FS.
         * added Utils::write_log and ::write_log_line methods for standardizing debug output
+
+0.68    23 Jan 2013
+        * fix failing test t/17-spider-server with 'use base' vs '@ISA'
+        * force URI objects to stringify when passing in/out of cache

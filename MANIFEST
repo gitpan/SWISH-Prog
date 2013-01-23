@@ -15,8 +15,8 @@ lib/SWISH/Prog/Aggregator/Mail.pm
 lib/SWISH/Prog/Aggregator/MailFS.pm
 lib/SWISH/Prog/Aggregator/Object.pm
 lib/SWISH/Prog/Aggregator/Spider.pm
-lib/SWISH/Prog/Aggregator/Spider/UA.pm
 lib/SWISH/Prog/Aggregator/Spider/Response.pm
+lib/SWISH/Prog/Aggregator/Spider/UA.pm
 lib/SWISH/Prog/Cache.pm
 lib/SWISH/Prog/Class.pm
 lib/SWISH/Prog/Config.pm
@@ -39,6 +39,8 @@ lib/SWISH/Prog/Utils.pm
 Makefile.PL
 MANIFEST
 META.yml
+MYMETA.json
+MYMETA.yml
 README
 t/00_synopsis.t
 t/01_fs.t

@@ -48,7 +48,7 @@ SKIP: {
         package MyServer;
         use Data::Dump qw( dump );
         use HTTP::Date;
-        use base ( 'Test::HTTP::Server::Simple',
+        @MyServer::ISA = ( 'Test::HTTP::Server::Simple',
             'HTTP::Server::Simple::Authen',
             'HTTP::Server::Simple::CGI' );
 
