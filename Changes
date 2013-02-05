@@ -309,3 +309,7 @@ Revision history for Perl extension Prog.
 0.68    23 Jan 2013
         * fix failing test t/17-spider-server with 'use base' vs '@ISA'
         * force URI objects to stringify when passing in/out of cache
+
+0.69    05 Feb 2013
+        * fix documentation for SWISH::Prog::InvIndex::Meta, add data() accessor method.
+

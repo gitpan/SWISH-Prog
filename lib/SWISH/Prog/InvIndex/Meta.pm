@@ -6,10 +6,10 @@ use Carp;
 use XML::Simple;
 use SWISH::3 qw( :constants );
 
-our $VERSION = '0.68';
+our $VERSION = '0.69';
 
 __PACKAGE__->mk_accessors(qw( invindex ));
-__PACKAGE__->mk_ro_accessors(qw( file ));
+__PACKAGE__->mk_ro_accessors(qw( file data ));
 
 # index metadata. read/write libswish3 file xml format.
 #
@@ -90,9 +90,13 @@ SWISH::Prog::InvIndex::Meta - read/write InvIndex metadata
 
 =head1 SYNOPSIS
 
+ use Data::Dump qw( dump );
  use SWISH::Prog::InvIndex;
  my $index = SWISH::Prog::InvIndex->new(path => 'path/to/index');
- print $index->meta;  # prints $index->meta->as_string
+ my $meta = $index->meta;
+ for my $key (keys %{ $meta->data }) {
+    dump $meta->$key;
+ }
  
 =head1 DESCRIPTION
 
@@ -110,6 +114,11 @@ Default is C<swish.xml>.
 =head2 init
 
 Read and initialize the swish_header_file().
+
+=head2 data
+
+The contents of the header file as a Perl hashref. This is a read-only
+accessor.
 
 =head2 file
 
