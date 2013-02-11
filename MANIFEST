@@ -58,6 +58,7 @@ t/14-search.t
 t/15-index-file-config.t
 t/16-replace-rules.t
 t/17-spider-server.t
+t/18-utils.t
 t/config2/complex.conf
 t/config2/example1.config
 t/config2/example2.config

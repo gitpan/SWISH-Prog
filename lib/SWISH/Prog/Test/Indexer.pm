@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use base 'SWISH::Prog::Indexer';
 
-our $VERSION = '0.69';
+our $VERSION = '0.70';
 
 sub test_mode {1}
 sub start     { }

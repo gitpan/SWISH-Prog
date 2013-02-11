@@ -4,7 +4,7 @@
       "Peter Karman, <perl@peknet.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Module::Install version 1.06, CPAN::Meta::Converter version 2.112150",
+   "generated_by" : "Module::Install version 1.06, CPAN::Meta::Converter version 2.120530",
    "license" : [
       "unknown"
    ],
@@ -33,42 +33,42 @@
       },
       "runtime" : {
          "recommends" : {
-            "DBI" : 0,
-            "File::Find" : 0,
-            "HTML::LinkExtor" : 0,
-            "HTML::Tagset" : 0,
-            "HTTP::Message" : 0,
-            "HTTP::Server::Simple" : 0,
-            "HTTP::Server::Simple::Authen" : 0,
+            "DBI" : "0",
+            "File::Find" : "0",
+            "HTML::LinkExtor" : "0",
+            "HTML::Tagset" : "0",
+            "HTTP::Message" : "0",
+            "HTTP::Server::Simple" : "0",
+            "HTTP::Server::Simple::Authen" : "0",
             "JSON" : "2",
-            "LWP::RobotUA" : 0,
-            "Mail::Box" : 0,
+            "LWP::RobotUA" : "0",
+            "Mail::Box" : "0",
             "SWISH::API::Object" : "0.13",
-            "Term::ProgressBar" : 0,
-            "Test::HTTP::Server::Simple" : 0,
-            "URI" : 0,
-            "XML::Feed" : 0,
+            "Term::ProgressBar" : "0",
+            "Test::HTTP::Server::Simple" : "0",
+            "URI" : "0",
+            "XML::Feed" : "0",
             "YAML::Syck" : "0.72"
          },
          "requires" : {
             "Config::General" : "2.31",
-            "Data::Dump" : 0,
-            "File::Basename" : 0,
+            "Data::Dump" : "0",
+            "File::Basename" : "0",
             "File::Rules" : "0.02",
-            "File::Slurp" : 0,
-            "File::Temp" : 0,
-            "MIME::Types" : 0,
-            "Path::Class" : 0,
-            "Rose::DateTime" : 0,
-            "Rose::ObjectX::CAF" : 0,
+            "File::Slurp" : "0",
+            "File::Temp" : "0",
+            "MIME::Types" : "0",
+            "Path::Class" : "0",
+            "Rose::DateTime" : "0",
+            "Rose::ObjectX::CAF" : "0",
             "SWISH::3" : "1.000005",
             "SWISH::Filter" : "0.15",
-            "Scalar::Util" : 0,
+            "Scalar::Util" : "0",
             "Search::Query" : "0.17",
             "Search::Tools" : "0.82",
-            "Test::More" : 0,
-            "Time::HiRes" : 0,
-            "XML::Simple" : 0,
+            "Test::More" : "0",
+            "Time::HiRes" : "0",
+            "XML::Simple" : "0",
             "perl" : "5.008003"
          }
       }
@@ -86,5 +86,5 @@
          "url" : "http://svn.swish-e.org/perl/SWISH-Prog/"
       }
    },
-   "version" : "0.69"
+   "version" : "0.70"
 }

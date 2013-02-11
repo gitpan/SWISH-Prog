@@ -6,7 +6,7 @@ use Data::Dump qw( dump );
 use File::Basename;
 use Search::Tools::XML;
 
-our $VERSION = '0.69';
+our $VERSION = '0.70';
 
 =pod
 
@@ -41,8 +41,7 @@ Hash of MIME types to their equivalent parser.
 
 =cut
 
-our $ExtRE
-    = qr{\.(html|htm|xml|txt|pdf|ps|doc|ppt|xls|mp3|css|ico|js|php)(\.gz)?}io;
+our $ExtRE       = qr{\.(\w+)(\.gz)?$}io;
 our %ParserTypes = (
 
     # mime                  parser type
@@ -72,6 +71,8 @@ my %ext2mime = (
     gz   => 'application/x-gzip',
     xls  => 'application/vnd.ms-excel',
     zip  => 'application/zip',
+    json => 'application/json',
+    yml  => 'application/x-yaml',
 
 );
 
@@ -111,6 +112,21 @@ sub mime_type {
         $ext2mime{$ext} = $mime . "";
     }
     return $ext2mime{$ext};
+}
+
+=head2 parser_for( I<url> )
+
+Returns the SWISH parser type for I<url>. This can be
+configured via the C<%ParserTypes> class variable.
+
+=cut
+
+sub parser_for {
+    my $self   = shift;
+    my $url    = shift or croak "url required";
+    my $mime   = $self->mime_type($url);
+    my $parser = $ParserTypes{$mime} || $ParserTypes{'default'};
+    return $parser;
 }
 
 =head2 path_parts( I<url> [, I<regex> ] )

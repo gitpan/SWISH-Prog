@@ -313,3 +313,7 @@ Revision history for Perl extension Prog.
 0.69    05 Feb 2013
         * fix documentation for SWISH::Prog::InvIndex::Meta, add data() accessor method.
 
+0.70    10 Feb 2013
+        * add tests for Utils class.
+        * Utils extension regex now matches \w+ rather than hardcoded document extensions.
+
