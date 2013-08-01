@@ -16,7 +16,7 @@ use Search::Tools::UTF8;
 binmode STDERR, ':utf8';
 binmode STDOUT, ':utf8';
 
-my $VERSION = '3.0.15';
+my $VERSION = '3.0.16';
 
 my $USAGE = qq{$0
  usage:
@@ -73,6 +73,7 @@ my $USAGE = qq{$0
     #-k : Print words starting with a given char.
     -L : Limit results to a range of property values
     -m : the maximum number of results to return [defaults to all results]
+    -n : query parser special NULL term
     #-P : next param is Phrase delimiter.
     #-p : include these document properties in the output "prop1 prop2 ..."
     -R : next param is Rank Scheme number (0 to 1)  [0].
@@ -110,6 +111,7 @@ my $Opt = {
     max                => undef,
     Merge              => undef,
     newer_than         => undef,
+    null_term          => undef,
     query              => '',
     sort_order         => '',
     Source             => 'fs',
@@ -139,6 +141,7 @@ my %allopts = (
     'max=i'               => 'max results [all]',
     'Merge'               => 'merge 2 or more indexes',
     'newer_than|N:s'      => 'index only documents newer than',
+    'null_term|n'         => 'NULL query parser term',
     'query|words=s'       => 'search query',
     'RankScheme=i'        => 'ranking algorithm (native only)',
     'sort_order=s'        => 'result sort order',
@@ -185,7 +188,8 @@ if ( defined $Opt->{verbose} and $Opt->{verbose} == 0 ) {
 }
 
 if ( !exists $ENV{SWISH_WARNINGS} ) {
-    $ENV{SWISH_WARNINGS} = $Opt->{Warnings};
+    $ENV{SWISH_WARNINGS}        = $Opt->{Warnings};
+    $ENV{SWISH_PARSER_WARNINGS} = $Opt->{Warnings};
 }
 
 my %prog_can = ( highlightable_fields => $Opt->{lucy_highlightable}, );
@@ -250,9 +254,17 @@ elsif ( $Opt->{query} ) {
     my $sclass   = "SWISH::Prog::${format}::Searcher";
     eval "require $sclass";
     croak $@ if $@;
+    my %qp_config = (
+        dialect          => $format,
+        query_class_opts => { debug => $Opt->{debug} }
+    );
+    if ( $Opt->{null_term} ) {
+        $qp_config{null_term} = 'NULL';
+    }
     my $searcher = $sclass->new(
-        invindex => $invindex->path . '',
-        debug    => $Opt->{debug},
+        invindex  => $invindex->path . '',
+        qp_config => \%qp_config,
+        debug     => $Opt->{debug},
     );
     my $start_time = Time::HiRes::time();
     my $results;

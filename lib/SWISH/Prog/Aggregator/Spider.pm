@@ -13,6 +13,7 @@ use SWISH::Prog::Cache;
 use SWISH::Prog::Aggregator::Spider::UA;
 use Search::Tools::UTF8;
 use XML::Feed;
+use WWW::Sitemap::XML;
 use File::Rules;
 
 #
@@ -50,7 +51,7 @@ __PACKAGE__->mk_accessors(
 
 #use LWP::Debug qw(+);
 
-our $VERSION = '0.70';
+our $VERSION = '0.71';
 
 # TODO make these configurable
 my %parser_types = %SWISH::Prog::Utils::ParserTypes;
@@ -499,6 +500,11 @@ sub _add_links {
 
     $self->{_parent} ||= $parent;    # first time.
 
+    $self->debug and $self->write_log(
+        uri => $parent,
+        msg => sprintf( 'evaluating %s links', scalar(@links) ),
+    );
+
     for my $l (@links) {
         my $uri = $l->abs( $self->{_base} ) or next;
         $uri = $uri->canonical;      # normalize
@@ -815,13 +821,39 @@ sub _make_request {
         return $response->status;
     }
 
+    if ( $response->ct ) {
+        $self->debug and $self->write_log(
+            uri => $uri,
+            msg => 'content-type: ' . $response->ct,
+        );
+    }
+
     # add its links to the queue.
     # If the resource looks like an XML feed of some kind,
     # glean its links differently than if it is an HTML response.
     if ( my $feed = $self->looks_like_feed($http_response) ) {
+        $self->debug and $self->write_log(
+            uri => $uri,
+            msg => 'looks like feed'
+        );
         my @links;
         for my $entry ( $feed->entries ) {
             push @links, URI->new( $entry->link );
+        }
+        $self->_add_links( $uri, @links );
+
+        # we don't want the feed content, we want the links.
+        # TODO make this optional
+        return $response->status;
+    }
+    elsif ( my $sitemap = $self->looks_like_sitemap($http_response) ) {
+        $self->debug and $self->write_log(
+            uri => $uri,
+            msg => 'looks like sitemap',
+        );
+        my @links;
+        for my $url ( $sitemap->urls ) {
+            push @links, URI->new( $url->loc );
         }
         $self->_add_links( $uri, @links );
 
@@ -992,6 +1024,37 @@ sub looks_like_feed {
     {
         my $xml = $response->decoded_content;    # TODO or content()
         return XML::Feed->parse( \$xml );
+    }
+
+    return 0;
+}
+
+=head2 looks_like_sitemap( I<http_response> )
+
+Called internally to perform naive heuristics on I<http_response>
+to determine whether it looks like a XML sitemap feed,
+rather than a HTML page.
+
+=cut
+
+sub looks_like_sitemap {
+    my $self     = shift;
+    my $response = shift or croak "response required";
+    my $headers  = $response->headers;
+    my $ct       = $headers->content_type;
+    if ( $ct eq 'text/html' or $ct eq 'application/xhtml+xml' ) {
+        return 0;
+    }
+    if (   $ct eq 'text/xml'
+        or $ct eq 'application/xml' )
+    {
+        my $xml     = $response->decoded_content;    # TODO or content()
+        my $sitemap = WWW::Sitemap::XML->new();
+        eval { $sitemap->load( string => $xml ); };
+        if ($@) {
+            return 0;
+        }
+        return $sitemap;
     }
 
     return 0;

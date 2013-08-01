@@ -4,7 +4,7 @@
       "Peter Karman, <perl@peknet.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Module::Install version 1.06, CPAN::Meta::Converter version 2.120530",
+   "generated_by" : "Module::Install version 1.06, CPAN::Meta::Converter version 2.130880",
    "license" : [
       "unknown"
    ],
@@ -47,6 +47,7 @@
             "Term::ProgressBar" : "0",
             "Test::HTTP::Server::Simple" : "0",
             "URI" : "0",
+            "WWW::Sitemap::XML" : "0",
             "XML::Feed" : "0",
             "YAML::Syck" : "0.72"
          },
@@ -86,5 +87,5 @@
          "url" : "http://svn.swish-e.org/perl/SWISH-Prog/"
       }
    },
-   "version" : "0.70"
+   "version" : "0.71"
 }

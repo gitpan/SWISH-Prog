@@ -34,6 +34,7 @@ recommends:
   Term::ProgressBar: 0
   Test::HTTP::Server::Simple: 0
   URI: 0
+  WWW::Sitemap::XML: 0
   XML::Feed: 0
   YAML::Syck: 0.72
 requires:
@@ -61,4 +62,4 @@ resources:
   homepage: http://dev.swish-e.org/wiki/perl
   license: http://dev.perl.org/licenses/
   repository: http://svn.swish-e.org/perl/SWISH-Prog/
-version: 0.70
+version: 0.71

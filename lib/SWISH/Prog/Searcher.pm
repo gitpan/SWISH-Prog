@@ -5,12 +5,13 @@ use base qw( SWISH::Prog::Class );
 use Carp;
 use Scalar::Util qw( blessed );
 
-our $VERSION = '0.70';
+our $VERSION = '0.71';
 
 __PACKAGE__->mk_accessors(
     qw(
         max_hits
         invindex
+        qp_config
         ),
 );
 
@@ -52,6 +53,10 @@ indexes at once).
 =head2 max_hits
 
 The maximum number of hits to return. Optional. Default is 1000.
+
+=head2 qp_config
+
+Optional hashref passed to Search::Query::Parser->new().
 
 =cut
 

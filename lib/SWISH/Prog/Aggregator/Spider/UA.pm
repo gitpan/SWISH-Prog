@@ -9,12 +9,14 @@ use Data::Dump qw( dump );
 use Search::Tools::UTF8;
 use SWISH::Prog::Aggregator::Spider::Response;
 
-our $VERSION = '0.70';
+our $VERSION = '0.71';
 
 # if Compress::Zlib is installed, this should handle gzip transparently.
 # thanks to
 # http://stackoverflow.com/questions/1285305/how-can-i-accept-gzip-compressed-content-using-lwpuseragent
 my $can_accept = HTTP::Message::decodable();
+
+# TODO handle when Zlib is *not* installed, via Content-Encoding header
 
 #warn "Accept-Encoding: $can_accept\n";
 

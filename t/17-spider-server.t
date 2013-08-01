@@ -48,9 +48,10 @@ SKIP: {
         package MyServer;
         use Data::Dump qw( dump );
         use HTTP::Date;
-        @MyServer::ISA = ( 'Test::HTTP::Server::Simple',
-            'HTTP::Server::Simple::Authen',
-            'HTTP::Server::Simple::CGI' );
+        @MyServer::ISA = (
+            'Test::HTTP::Server::Simple', 'HTTP::Server::Simple::Authen',
+            'HTTP::Server::Simple::CGI'
+        );
 
         my %dispatch = (
             '/'                  => \&resp_root,
@@ -63,6 +64,7 @@ SKIP: {
             '/old/page'          => \&resp_old_page,
             '/size/big'          => \&resp_big_page,
             '/img/test'          => \&resp_img,
+            '/sitemap.xml'       => \&sitemap,
             '/redirect/elsewhere' =>
                 [ 307, 'http://somewherefaraway.net/donotfollow' ],
         );
@@ -104,6 +106,7 @@ SKIP: {
                 qq(<a href="#">recursive anchor</a>),
                 qq(<a href="/">root</a>),
                 qq(<a href="hello">follow me</a>),
+                qq(<a href="sitemap.xml">sitemap</a>),
                 qq(<a href="secret">secret</a>),
                 qq(<a href="nosuchlink">404</a>),
                 qq(<a href="far/too/deep/to/reach">depth</a>),
@@ -172,6 +175,47 @@ SKIP: {
                     $cgi->end_html;
             }
         }
+
+        sub sitemap {
+            my $cgi = shift;
+
+            my $base = $cgi->url();
+
+            print "Content-Type: application/xml\n\n";
+
+            my $now = HTTP::Date::time2iso( time() );
+            $now =~ s/ /T/;
+            my $yesterday = HTTP::Date::time2iso( time() - 86400 );
+            $yesterday =~ s/ /T/;
+
+            print <<XML;
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	    xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"
+	    xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+	<url>
+		<loc>$base/hello</loc> 
+		<lastmod>$now+00:00</lastmod> 
+		<changefreq>weekly</changefreq> 
+		<priority>0.6</priority>
+	</url>
+	<url>
+		<loc>$base/nosuchlink</loc> 
+		<lastmod>$yesterday+00:00</lastmod> 
+		<changefreq>daily</changefreq> 
+		<priority>0.6</priority>
+	</url>
+	<url>
+		<loc>http://elsewhere.foo/bar</loc> 
+		<lastmod>$yesterday+00:00</lastmod> 
+		<changefreq>hourly</changefreq> 
+		<priority>0.6</priority>
+	</url>
+</urlset>
+XML
+
+        }
     }
 
     use_ok('SWISH::Prog::Test::Indexer');
@@ -211,6 +255,6 @@ SKIP: {
     );
 
     diag( "spidering " . $base_uri );
-    is( $spider->crawl($base_uri), 4, "crawl" );
+    is( $spider->crawl($base_uri), 5, "crawl" );
 
 }

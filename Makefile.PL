@@ -36,6 +36,7 @@ recommends 'HTTP::Server::Simple'         => 0;
 recommends 'HTTP::Server::Simple::Authen' => 0;
 recommends 'Test::HTTP::Server::Simple'   => 0;
 recommends 'XML::Feed'                    => 0;
+recommends 'WWW::Sitemap::XML'            => 0;
 recommends 'URI'                          => 0;
 recommends 'SWISH::API::Object'           => 0.13;  # native searcher requires
 recommends 'YAML::Syck'                   => '0.72';
