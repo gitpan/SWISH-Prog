@@ -10,7 +10,7 @@ use URI;
 use HTML::Tagset;
 use HTML::HeadParser;
 
-our $VERSION = '0.71';
+our $VERSION = '0.72';
 
 __PACKAGE__->mk_accessors(
     qw(

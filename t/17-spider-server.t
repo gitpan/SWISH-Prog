@@ -220,8 +220,12 @@ XML
 
     use_ok('SWISH::Prog::Test::Indexer');
 
-    my $server   = MyServer->new();
+    my $port     = 5002;
+    my $server   = MyServer->new($port);
     my $base_uri = $server->started_ok('start http server');
+    if (!$base_uri) {
+        die "server failed to start";
+    }
     my $debug    = $ENV{PERL_DEBUG};
 
     ok( my $spider = SWISH::Prog::Aggregator::Spider->new(
