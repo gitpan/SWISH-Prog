@@ -1,9 +1,12 @@
 Revision history for Perl extension Prog.
 
+0.74 01 Oct 2013
+ - packaaging clean up only
+
 0.73 12 Sept 2013
  - turn off Pod tests unless RELEASE_TESTING env var set. Pod::Coverage
-   failures were because optional dependencies were not present but
-   module load was attempted in order to walk symbol tree for pod tests.
+   failures were because optional dependencies were not present but module
+   load was attempted in order to walk symbol tree for pod tests.
 
 0.72 10 Sept 2013
  - add TRACE_ALL to pod-coverage test to discover why it suddenly started
@@ -329,8 +332,8 @@ Revision history for Perl extension Prog.
  - test indexes are removed as part of 'make clean'
  - switched from Data::Dumper to Data::Dump
  - added new SWISH::Prog::Object example
- - fixed bug in SWISH::Prog::Headers to test defined()	rather than simply
-   eval true/false
+ - fixed bug in SWISH::Prog::Headers to test defined()	   rather than
+   simply eval true/false
  - fixed bug in SWISH::Prog::DBI with accepting DBI handle in init()
  - changed to using IO::All instead of File::stat and File::Slurp for
    better UTF8 support

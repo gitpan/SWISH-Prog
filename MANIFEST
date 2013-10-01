@@ -39,8 +39,6 @@ lib/SWISH/Prog/Utils.pm
 Makefile.PL
 MANIFEST
 META.yml
-MYMETA.json
-MYMETA.yml
 README
 t/00_synopsis.t
 t/01_fs.t

@@ -6,7 +6,7 @@ use Carp;
 use XML::Simple;
 use SWISH::3 qw( :constants );
 
-our $VERSION = '0.73';
+our $VERSION = '0.74';
 
 __PACKAGE__->mk_accessors(qw( invindex ));
 __PACKAGE__->mk_ro_accessors(qw( file data ));
