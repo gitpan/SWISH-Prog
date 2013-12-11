@@ -9,7 +9,7 @@ use SWISH::Prog::Doc;
 use Scalar::Util qw( blessed );
 use Data::Dump qw( dump );
 
-our $VERSION = '0.74';
+our $VERSION = '0.75';
 
 __PACKAGE__->mk_accessors(
     qw(
@@ -206,9 +206,10 @@ sub swish_filter {
     }
 
     unless ( defined $doc->parser ) {
-        $doc->parser( $SWISH::Prog::Utils::ParserTypes{ $doc->type }
-                || $SWISH::Prog::Utils::ParserTypes{default} )
-            if $self->set_parser_from_type;
+        if ( $self->set_parser_from_type ) {
+            my $type = $doc->type || 'default';
+            $doc->parser( $SWISH::Prog::Utils::ParserTypes{$type} );
+        }
     }
 
     if ( $self->{swish_filter_obj}->can_filter( $doc->type ) ) {

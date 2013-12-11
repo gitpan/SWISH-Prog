@@ -16,7 +16,7 @@ use Search::Tools::UTF8;
 binmode STDERR, ':utf8';
 binmode STDOUT, ':utf8';
 
-my $VERSION = '3.0.16';
+my $VERSION = '3.1.0';
 
 my $USAGE = qq{$0
  usage:
@@ -26,6 +26,7 @@ my $USAGE = qq{$0
           [-m num] [-t str] [-d delim] [-H (num)] [-x output_format] \
           [-R rank_scheme] [-L prop low high]
     swish3 -k (char|*) [-f invindex1 invindex2 ...]
+    swish3 -e opt=val
     swish3 -M invindex1 ... outputfile
     swish3 -N path/to/compare/file or date
     swish3 -V
@@ -36,17 +37,18 @@ my $USAGE = qq{$0
  # commented options are not yet supported
 
  indexing options:
-   --aggregator_opts : name=value
+    -A : name=value passed directly to Aggregator
     -c : configuration file
     -D : Debug mode
    --doc_filter : doc_filter
     -E : next param is total expected files (generates progress bar)
     -f : invindex dir to create or search from [index.swish3]
     -F : next param is invindex format (ks, lucy, xapian, native, or dbi) [native]
+    -h : print this usage statement
     -i : create an index from the specified files
         for "-S fs" - specify a list of files or directories
         for "-S spider" - specify a list of URLs
-    -h : print this usage statement
+    -I : name=value passed directly to Indexer
     -l : follow symbolic links when indexing
     -M : merges index files
     -N : index only files with a modification date newer than path or date
@@ -65,7 +67,6 @@ my $USAGE = qq{$0
     -b : begin results at this number
     #-d : next param is delimiter.
     #-E : Append errors to file specified, or stderr if file not specified.
-    #-e : "Economic Mode": The index proccess uses less RAM.
     -f : invindex dir to create or search from [index.swish3]
     -F : next param is invindex format (ks, lucy, xapian, native, or dbi) [native]
     -h : print this usage statement
@@ -93,37 +94,37 @@ SWISH::Prog::VERSION : $SWISH::Prog::VERSION
 };
 
 my $Opt = {
-    aggregator_opts    => {},
-    begin              => 0,
-    config             => '',
-    Debug              => 0,
-    doc_filter         => undef,
-    Expected           => undef,
-    extended_output    => undef,
-    folder             => undef,
-    Format             => 'native',
-    Headers            => 1,
-    help               => 0,
-    input              => 0,
-    Limit              => [],
-    links              => 0,
-    lucy_highlightable => 0,
-    max                => undef,
-    Merge              => undef,
-    newer_than         => undef,
-    null_term          => undef,
-    query              => '',
-    sort_order         => '',
-    Source             => 'fs',
-    test_mode          => $ENV{SWISH_TEST} || 0,
-    verbose            => undef,
-    Version            => 0,
-    Warnings           => 2,
+    Aggregator_opts => {},
+    begin           => 0,
+    config          => '',
+    Debug           => 0,
+    doc_filter      => undef,
+    Expected        => undef,
+    extended_output => undef,
+    folder          => undef,
+    Format          => 'native',
+    Headers         => 1,
+    help            => 0,
+    input           => 0,
+    Indexer_opts    => {},
+    Limit           => [],
+    links           => 0,
+    max             => undef,
+    Merge           => undef,
+    newer_than      => undef,
+    null_term       => undef,
+    query           => '',
+    sort_order      => '',
+    Source          => 'fs',
+    test_mode       => $ENV{SWISH_TEST} || 0,
+    verbose         => undef,
+    Version         => 0,
+    Warnings        => 2,
 };
 
 my %allopts = (
-    'aggregator|Source=s' => 'aggregator type',
-    'aggregator_opts=s'   => 'aggregator options',
+    'aggregator|Source=s' => 'Aggregator type',
+    'Aggregator_opts=s'   => 'Aggregator options',
     'begin=i'             => 'begin results [0]',
     'config=s'            => 'config file',
     'debug|Debug:i'       => 'debugging',
@@ -134,10 +135,10 @@ my %allopts = (
     'Format=s'            => 'indexer type (native, ks, lucy, xapian, dbi)',
     'Headers=i'           => 'Header output verbosity',
     'help'                => 'print usage',
+    'Indexer_opts=s'      => 'Indexer options',
     'input'               => 'indexing mode',
     'Limit=s'             => 'Limit to range of values',
     'links'               => 'follow symbolic links when indexing',
-    'lucy_highlightable'  => 'set highlightable_fields for Lucy indexer',
     'max=i'               => 'max results [all]',
     'Merge'               => 'merge 2 or more indexes',
     'newer_than|N:s'      => 'index only documents newer than',
@@ -192,11 +193,11 @@ if ( !exists $ENV{SWISH_WARNINGS} ) {
     $ENV{SWISH_PARSER_WARNINGS} = $Opt->{Warnings};
 }
 
-my %prog_can = ( highlightable_fields => $Opt->{lucy_highlightable}, );
+my %prog_can = ();
 
 for my $opt ( keys %$Opt ) {
-    if ( SWISH::Prog->can($opt) ) {
-        $prog_can{$opt} = $Opt->{$opt};
+    if ( SWISH::Prog->can( lc($opt) ) ) {
+        $prog_can{ lc($opt) } = $Opt->{$opt};
     }
     elsif ( $opt eq 'doc_filter' ) {
         $prog_can{filter} = $Opt->{$opt};

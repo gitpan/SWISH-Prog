@@ -10,9 +10,10 @@ use SWISH::Prog::Config;
 use SWISH::Prog::InvIndex;
 use SWISH::Prog::ReplaceRules;
 
-our $VERSION = '0.74';
+our $VERSION = '0.75';
 
-__PACKAGE__->mk_accessors(qw( aggregator aggregator_opts test_mode ));
+__PACKAGE__->mk_accessors(
+    qw( aggregator aggregator_opts indexer_opts test_mode ));
 
 # each $swishProg hasa aggregator, which hasa indexer and hasa invindex
 
@@ -161,9 +162,6 @@ sub init {
     # no such method. just convenience.
     my $filter = delete $arg{filter};
 
-    # no such method, but pass through to Lucy if applicable.
-    my $highlightable_fields = delete $arg{highlightable_fields};
-
     $self->SUPER::init(%arg);
 
     # search mode requires only invindex
@@ -203,10 +201,8 @@ sub init {
             verbose   => $self->verbose,
             config    => $config,              # may be undef
             test_mode => $self->test_mode,
+            %{ $self->indexer_opts || {} },
         );
-        if ( $indexer->isa('SWISH::Prog::Lucy::Indexer') ) {
-            $indexer_opts{highlightable_fields} = $highlightable_fields;
-        }
 
         $self->debug and warn "indexer opts: " . dump( \%indexer_opts );
 
@@ -217,7 +213,7 @@ sub init {
     }
 
     $aggregator = $self->{aggregator} || 'fs';
-    my $aggregator_opts = $self->{aggregator_opts} || {};
+    my $aggregator_opts = $self->aggregator_opts || {};
 
     if ( !blessed($aggregator) ) {
 
@@ -316,6 +312,10 @@ Get the SWISH::Prog::Aggregator object. You should set this in new().
 =head2 aggregator_opts
 
 Get the hashref of options passed internally to the B<aggregator> constructor.
+
+=head2 indexer_opts
+
+Get the hashref of options passed internally to the B<indexer> constructor.
 
 =head2 run( I<collection> )
 

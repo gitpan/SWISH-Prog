@@ -1,5 +1,10 @@
 Revision history for Perl extension Prog.
 
+0.75 11 Dec 2013
+ - 3.1.0 release of swish3 cli:
+   * remove --lucy_highlightable and replace with -I (--Indexer_opts)
+   * rename --aggregator_opts to --Aggregator_opts
+ 
 0.74 01 Oct 2013
  - packaaging clean up only
 
